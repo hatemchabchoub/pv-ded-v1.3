@@ -327,16 +327,6 @@ const PdfImportPage = () => {
                 )}
               </div>
             </div>
-            {queuedCount > 0 && (
-              <Button
-                size="sm"
-                onClick={processAllQueued}
-                disabled={!!processingId}
-              >
-                {processingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                تحليل الكل ({queuedCount})
-              </Button>
-            )}
           </div>
 
           <div className="surface-elevated divide-y divide-border">
