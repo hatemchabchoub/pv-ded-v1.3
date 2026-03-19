@@ -262,15 +262,22 @@ const PvWizardPage = () => {
       const internalRef = `PV-${year}-${deptCode}-${pvNumber.replace(/\//g, "-")}`;
 
       const { data: pv, error: pvError } = await supabase.from("pv").insert({
-        internal_reference: internalRef, pv_number: pvNumber, pv_date: pvDate,
-        department_id: departmentId || null, officer_id: officerId || null,
-        referral_type: referralType || null, referral_source_id: referralSourceId || null,
-        pv_type: pvType || null, case_status: status,
+        internal_reference: internalRef,
+        pv_number: pvNumber,
+        pv_date: pvDate,
+        department_id: departmentId || null,
+        officer_id: officerId || null,
+        referral_type: referralType || null,
+        referral_source_id: referralSourceId || null,
+        pv_type: pvType || null,
+        case_status: status,
         parent_pv_id: pvType === "ضلع" && parentPvId ? parentPvId : null,
-        total_actual_seizure: totalActual, total_virtual_seizure: totalVirtual,
+        total_actual_seizure: totalActual,
+        total_virtual_seizure: totalVirtual,
         total_precautionary_seizure: totalPrecautionary,
-        notes: notes || null, source_import_type: sourceImportId ? "ocr" : "manual",
-        source_import_id: sourceImportId || null, created_by: user.id,
+        notes: notes || null,
+        source_import_type: sourceImportId ? "ocr" : "manual",
+        created_by: user.id,
       }).select("id").single();
 
       if (pvError) throw pvError;
@@ -312,7 +319,17 @@ const PvWizardPage = () => {
         if (sErr) throw sErr;
       }
 
-      // Audit log is now handled by server-side trigger
+      if (sourceImportId) {
+        const { error: importLinkError } = await supabase
+          .from("document_imports")
+          .update({ pv_id: pv.id })
+          .eq("id", sourceImportId)
+          .eq("uploaded_by", user.id);
+
+        if (importLinkError) {
+          toast.error("تم إنشاء المحضر لكن تعذر ربطه بسجل الاستيراد");
+        }
+      }
 
       queryClient.invalidateQueries({ queryKey: ["pv-list"] });
       toast.success(status === "draft" ? "تم حفظ المحضر كمسودة" : "تم إنشاء المحضر وتقديمه للمراجعة");
