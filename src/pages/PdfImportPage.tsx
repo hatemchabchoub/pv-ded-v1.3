@@ -100,16 +100,15 @@ const PdfImportPage = () => {
     e.target.value = "";
   }, []);
 
-  const processFile = useCallback(async (fileId: string) => {
+  const processFileItem = useCallback(async (fileItem: FileImportItem) => {
     if (!user) return;
+
+    const fileId = fileItem.id;
 
     setFiles((prev) =>
       prev.map((f) => (f.id === fileId ? { ...f, status: "uploading" } : f))
     );
     setProcessingId(fileId);
-
-    const fileItem = files.find((f) => f.id === fileId);
-    if (!fileItem) return;
 
     try {
       // Upload to storage
