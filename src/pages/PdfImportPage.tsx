@@ -55,7 +55,7 @@ const PdfImportPage = () => {
     },
   });
 
-  const handleFilesSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFilesSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = e.target.files;
     if (!selectedFiles || selectedFiles.length === 0) return;
 
