@@ -1,4 +1,1 @@
-project_id = "johinrnqvsynrbpevfka"
-
-[functions.create-officer-account]
-verify_jwt = false
+project_id = "yzkvmdsyhqeobhkubfes"
