@@ -55,51 +55,6 @@ const PdfImportPage = () => {
     },
   });
 
-  const handleFilesSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files;
-    if (!selectedFiles || selectedFiles.length === 0) return;
-
-    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-    const newItems: FileImportItem[] = [];
-
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
-      if (!allowed.includes(file.type)) {
-        toast.error(`${file.name}: صيغة غير مدعومة`);
-        continue;
-      }
-      if (file.size > 20 * 1024 * 1024) {
-        toast.error(`${file.name}: الملف كبير جدا (الحد الأقصى 20 ميقا)`);
-        continue;
-      }
-      newItems.push({
-        id: crypto.randomUUID(),
-        file,
-        fileName: file.name,
-        status: "queued",
-        importId: null,
-        extractedData: null,
-        confidenceData: {},
-        overallConfidence: 0,
-        fieldCandidates: [],
-        editedValues: {},
-      });
-    }
-
-    if (newItems.length > 0) {
-      setFiles((prev) => [...prev, ...newItems]);
-      toast.success(`تمت إضافة ${newItems.length} ملف(ات) — جاري التحليل...`);
-
-      // Auto-process all new files sequentially
-      for (const item of newItems) {
-        await processFileItem(item);
-      }
-    }
-
-    // Reset input
-    e.target.value = "";
-  }, [processFileItem]);
-
   const processFileItem = useCallback(async (fileItem: FileImportItem) => {
     if (!user) return;
 
@@ -191,6 +146,51 @@ const PdfImportPage = () => {
   const retryFile = useCallback(async (fileItem: FileImportItem) => {
     setFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "queued" } : f));
     await processFileItem({ ...fileItem, status: "queued" });
+  }, [processFileItem]);
+
+  const handleFilesSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    const newItems: FileImportItem[] = [];
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      if (!allowed.includes(file.type)) {
+        toast.error(`${file.name}: صيغة غير مدعومة`);
+        continue;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`${file.name}: الملف كبير جدا (الحد الأقصى 20 ميقا)`);
+        continue;
+      }
+      newItems.push({
+        id: crypto.randomUUID(),
+        file,
+        fileName: file.name,
+        status: "queued",
+        importId: null,
+        extractedData: null,
+        confidenceData: {},
+        overallConfidence: 0,
+        fieldCandidates: [],
+        editedValues: {},
+      });
+    }
+
+    if (newItems.length > 0) {
+      setFiles((prev) => [...prev, ...newItems]);
+      toast.success(`تمت إضافة ${newItems.length} ملف(ات) — جاري التحليل...`);
+
+      // Auto-process all new files sequentially
+      for (const item of newItems) {
+        await processFileItem(item);
+      }
+    }
+
+    // Reset input
+    e.target.value = "";
   }, [processFileItem]);
 
   const removeFile = (fileId: string) => {
