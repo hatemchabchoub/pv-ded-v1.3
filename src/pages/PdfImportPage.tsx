@@ -217,7 +217,7 @@ const PdfImportPage = () => {
     );
 
     // Store prefill data in sessionStorage and open in new tab so we keep state here
-    sessionStorage.setItem("pv_prefill", JSON.stringify({ prefill: data, importId: fileItem.importId }));
+    localStorage.setItem("pv_prefill", JSON.stringify({ prefill: data, importId: fileItem.importId }));
     window.open("/pv/new?from=ocr", "_blank");
     toast.success("تم فتح استمارة المحضر في نافذة جديدة");
   };
