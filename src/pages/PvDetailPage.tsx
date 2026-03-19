@@ -132,7 +132,7 @@ const PvDetailPage = () => {
         supabase.from("offenders").delete().eq("pv_id", id),
         supabase.from("violations").delete().eq("pv_id", id),
         supabase.from("seizures").delete().eq("pv_id", id),
-        supabase.from("attachments").delete().eq("pv_id", id),
+        // attachments handled by cascade
       ]);
       const { error } = await supabase.from("pv").delete().eq("id", id);
       if (error) throw error;

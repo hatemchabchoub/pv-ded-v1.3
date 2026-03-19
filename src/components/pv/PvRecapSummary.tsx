@@ -105,7 +105,7 @@ export default function PvRecapSummary({ parentPvId }: Props) {
   const uniqueOffenders = (() => {
     const seen = new Set<string>();
     return (allOffenders || []).filter(o => {
-      const key = (o.normalized_name || o.name_or_company).toLowerCase().trim();
+      const key = (o.name_or_company).toLowerCase().trim();
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
