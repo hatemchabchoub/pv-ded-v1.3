@@ -186,14 +186,12 @@ const PdfImportPage = () => {
     } finally {
       setProcessingId(null);
     }
-  }, [user, files, queryClient]);
+  }, [user, queryClient]);
 
-  const processAllQueued = useCallback(async () => {
-    const queued = files.filter((f) => f.status === "queued");
-    for (const f of queued) {
-      await processFile(f.id);
-    }
-  }, [files, processFile]);
+  const retryFile = useCallback(async (fileItem: FileImportItem) => {
+    setFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "queued" } : f));
+    await processFileItem({ ...fileItem, status: "queued" });
+  }, [processFileItem]);
 
   const removeFile = (fileId: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
