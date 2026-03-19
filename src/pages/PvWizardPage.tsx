@@ -270,7 +270,6 @@ const PvWizardPage = () => {
         return;
       }
 
-    try {
       const dept = departments?.find(d => d.id === departmentId);
       const deptCode = dept?.code || "UNK";
       const year = pvDate?.substring(0, 4) || new Date().getFullYear();
