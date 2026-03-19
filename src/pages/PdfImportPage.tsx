@@ -98,7 +98,7 @@ const PdfImportPage = () => {
 
     // Reset input
     e.target.value = "";
-  }, []);
+  }, [processFileItem]);
 
   const processFileItem = useCallback(async (fileItem: FileImportItem) => {
     if (!user) return;
