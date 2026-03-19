@@ -89,14 +89,14 @@ const PvWizardPage = () => {
     
     // Check sessionStorage (opened from new tab via OCR page)
     if (!p) {
-      const stored = sessionStorage.getItem("pv_prefill");
+      const stored = localStorage.getItem("pv_prefill");
       if (stored) {
         try {
           const parsed = JSON.parse(stored);
           p = parsed.prefill;
           importId = parsed.importId || null;
         } catch { /* ignore */ }
-        sessionStorage.removeItem("pv_prefill");
+        localStorage.removeItem("pv_prefill");
       }
     }
 
