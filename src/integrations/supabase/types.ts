@@ -14,52 +14,12 @@ export type Database = {
   }
   public: {
     Tables: {
-      attachments: {
-        Row: {
-          file_name: string
-          file_type: string | null
-          id: string
-          pv_id: string
-          storage_path: string
-          uploaded_at: string | null
-          uploaded_by: string | null
-        }
-        Insert: {
-          file_name: string
-          file_type?: string | null
-          id?: string
-          pv_id: string
-          storage_path: string
-          uploaded_at?: string | null
-          uploaded_by?: string | null
-        }
-        Update: {
-          file_name?: string
-          file_type?: string | null
-          id?: string
-          pv_id?: string
-          storage_path?: string
-          uploaded_at?: string | null
-          uploaded_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "attachments_pv_id_fkey"
-            columns: ["pv_id"]
-            isOneToOne: false
-            referencedRelation: "pv"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audit_logs: {
         Row: {
           action: string
           created_at: string | null
           id: string
           metadata: Json | null
-          new_value: Json | null
-          old_value: Json | null
           record_id: string | null
           table_name: string | null
           user_id: string | null
@@ -69,8 +29,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           metadata?: Json | null
-          new_value?: Json | null
-          old_value?: Json | null
           record_id?: string | null
           table_name?: string | null
           user_id?: string | null
@@ -80,8 +38,6 @@ export type Database = {
           created_at?: string | null
           id?: string
           metadata?: Json | null
-          new_value?: Json | null
-          old_value?: Json | null
           record_id?: string | null
           table_name?: string | null
           user_id?: string | null
@@ -97,6 +53,7 @@ export type Database = {
           name_ar: string | null
           name_fr: string
           region: string | null
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -106,6 +63,7 @@ export type Database = {
           name_ar?: string | null
           name_fr: string
           region?: string | null
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -115,6 +73,7 @@ export type Database = {
           name_ar?: string | null
           name_fr?: string
           region?: string | null
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -163,11 +122,11 @@ export type Database = {
         Row: {
           confidence_score: number | null
           created_at: string | null
-          created_pv_id: string | null
           extracted_json: Json | null
           finished_at: string | null
           id: string
           import_type: string | null
+          pv_id: string | null
           raw_text: string | null
           source_file_name: string | null
           started_at: string | null
@@ -179,11 +138,11 @@ export type Database = {
         Insert: {
           confidence_score?: number | null
           created_at?: string | null
-          created_pv_id?: string | null
           extracted_json?: Json | null
           finished_at?: string | null
           id?: string
           import_type?: string | null
+          pv_id?: string | null
           raw_text?: string | null
           source_file_name?: string | null
           started_at?: string | null
@@ -195,11 +154,11 @@ export type Database = {
         Update: {
           confidence_score?: number | null
           created_at?: string | null
-          created_pv_id?: string | null
           extracted_json?: Json | null
           finished_at?: string | null
           id?: string
           import_type?: string | null
+          pv_id?: string | null
           raw_text?: string | null
           source_file_name?: string | null
           started_at?: string | null
@@ -210,8 +169,8 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "document_imports_created_pv_id_fkey"
-            columns: ["created_pv_id"]
+            foreignKeyName: "document_imports_pv_id_fkey"
+            columns: ["pv_id"]
             isOneToOne: false
             referencedRelation: "pv"
             referencedColumns: ["id"]
@@ -250,6 +209,7 @@ export type Database = {
           active: boolean | null
           category_ar: string | null
           category_fr: string
+          created_at: string | null
           id: string
           type_ar: string | null
           type_fr: string | null
@@ -258,6 +218,7 @@ export type Database = {
           active?: boolean | null
           category_ar?: string | null
           category_fr: string
+          created_at?: string | null
           id?: string
           type_ar?: string | null
           type_fr?: string | null
@@ -266,6 +227,7 @@ export type Database = {
           active?: boolean | null
           category_ar?: string | null
           category_fr?: string
+          created_at?: string | null
           id?: string
           type_ar?: string | null
           type_fr?: string | null
@@ -312,53 +274,35 @@ export type Database = {
         Row: {
           address: string | null
           city: string | null
-          country: string | null
           created_at: string | null
           display_order: number | null
-          duplicate_candidate: boolean | null
           id: string
           identifier: string | null
-          identifier_issue_date: string | null
           name_or_company: string
-          normalized_name: string | null
           person_type: string | null
           pv_id: string
-          risk_score: number | null
-          updated_at: string | null
         }
         Insert: {
           address?: string | null
           city?: string | null
-          country?: string | null
           created_at?: string | null
           display_order?: number | null
-          duplicate_candidate?: boolean | null
           id?: string
           identifier?: string | null
-          identifier_issue_date?: string | null
           name_or_company: string
-          normalized_name?: string | null
           person_type?: string | null
           pv_id: string
-          risk_score?: number | null
-          updated_at?: string | null
         }
         Update: {
           address?: string | null
           city?: string | null
-          country?: string | null
           created_at?: string | null
           display_order?: number | null
-          duplicate_candidate?: boolean | null
           id?: string
           identifier?: string | null
-          identifier_issue_date?: string | null
           name_or_company?: string
-          normalized_name?: string | null
           person_type?: string | null
           pv_id?: string
-          risk_score?: number | null
-          updated_at?: string | null
         }
         Relationships: [
           {
@@ -384,6 +328,7 @@ export type Database = {
           initial_password: string | null
           rank_label: string | null
           unit_id: string | null
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -398,6 +343,7 @@ export type Database = {
           initial_password?: string | null
           rank_label?: string | null
           unit_id?: string | null
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -412,6 +358,7 @@ export type Database = {
           initial_password?: string | null
           rank_label?: string | null
           unit_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -440,6 +387,7 @@ export type Database = {
           full_name: string | null
           id: string
           unit_id: string | null
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
@@ -450,6 +398,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           unit_id?: string | null
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
@@ -460,6 +409,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           unit_id?: string | null
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -487,7 +437,7 @@ export type Database = {
           customs_violation: boolean | null
           department_id: string | null
           id: string
-          internal_reference: string
+          internal_reference: string | null
           notes: string | null
           officer_id: string | null
           parent_pv_id: string | null
@@ -499,7 +449,6 @@ export type Database = {
           referral_source_id: string | null
           referral_type: string | null
           seizure_renewal: boolean | null
-          source_import_id: string | null
           source_import_type: string | null
           total_actual_seizure: number | null
           total_precautionary_seizure: number | null
@@ -507,7 +456,6 @@ export type Database = {
           total_virtual_seizure: number | null
           unit_id: string | null
           updated_at: string | null
-          updated_by: string | null
         }
         Insert: {
           case_status?: string | null
@@ -517,7 +465,7 @@ export type Database = {
           customs_violation?: boolean | null
           department_id?: string | null
           id?: string
-          internal_reference: string
+          internal_reference?: string | null
           notes?: string | null
           officer_id?: string | null
           parent_pv_id?: string | null
@@ -529,7 +477,6 @@ export type Database = {
           referral_source_id?: string | null
           referral_type?: string | null
           seizure_renewal?: boolean | null
-          source_import_id?: string | null
           source_import_type?: string | null
           total_actual_seizure?: number | null
           total_precautionary_seizure?: number | null
@@ -537,7 +484,6 @@ export type Database = {
           total_virtual_seizure?: number | null
           unit_id?: string | null
           updated_at?: string | null
-          updated_by?: string | null
         }
         Update: {
           case_status?: string | null
@@ -547,7 +493,7 @@ export type Database = {
           customs_violation?: boolean | null
           department_id?: string | null
           id?: string
-          internal_reference?: string
+          internal_reference?: string | null
           notes?: string | null
           officer_id?: string | null
           parent_pv_id?: string | null
@@ -559,7 +505,6 @@ export type Database = {
           referral_source_id?: string | null
           referral_type?: string | null
           seizure_renewal?: boolean | null
-          source_import_id?: string | null
           source_import_type?: string | null
           total_actual_seizure?: number | null
           total_precautionary_seizure?: number | null
@@ -567,7 +512,6 @@ export type Database = {
           total_virtual_seizure?: number | null
           unit_id?: string | null
           updated_at?: string | null
-          updated_by?: string | null
         }
         Relationships: [
           {
@@ -610,18 +554,21 @@ export type Database = {
       referral_sources: {
         Row: {
           active: boolean | null
+          created_at: string | null
           id: string
           label_ar: string | null
           label_fr: string
         }
         Insert: {
           active?: boolean | null
+          created_at?: string | null
           id?: string
           label_ar?: string | null
           label_fr: string
         }
         Update: {
           active?: boolean | null
+          created_at?: string | null
           id?: string
           label_ar?: string | null
           label_fr?: string
@@ -631,14 +578,11 @@ export type Database = {
       seizures: {
         Row: {
           created_at: string | null
-          currency: string | null
           display_order: number | null
           estimated_value: number | null
           goods_category: string | null
-          goods_reference_id: string | null
           goods_type: string | null
           id: string
-          notes: string | null
           pv_id: string
           quantity: number | null
           seizure_type: string | null
@@ -646,14 +590,11 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
-          currency?: string | null
           display_order?: number | null
           estimated_value?: number | null
           goods_category?: string | null
-          goods_reference_id?: string | null
           goods_type?: string | null
           id?: string
-          notes?: string | null
           pv_id: string
           quantity?: number | null
           seizure_type?: string | null
@@ -661,27 +602,17 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
-          currency?: string | null
           display_order?: number | null
           estimated_value?: number | null
           goods_category?: string | null
-          goods_reference_id?: string | null
           goods_type?: string | null
           id?: string
-          notes?: string | null
           pv_id?: string
           quantity?: number | null
           seizure_type?: string | null
           unit?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "seizures_goods_reference_id_fkey"
-            columns: ["goods_reference_id"]
-            isOneToOne: false
-            referencedRelation: "goods_reference"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "seizures_pv_id_fkey"
             columns: ["pv_id"]
@@ -694,30 +625,33 @@ export type Database = {
       units: {
         Row: {
           active: boolean | null
-          code: string
+          code: string | null
           created_at: string | null
           department_id: string | null
           id: string
           name_ar: string | null
           name_fr: string
+          updated_at: string | null
         }
         Insert: {
           active?: boolean | null
-          code: string
+          code?: string | null
           created_at?: string | null
           department_id?: string | null
           id?: string
           name_ar?: string | null
           name_fr: string
+          updated_at?: string | null
         }
         Update: {
           active?: boolean | null
-          code?: string
+          code?: string | null
           created_at?: string | null
           department_id?: string | null
           id?: string
           name_ar?: string | null
           name_fr?: string
+          updated_at?: string | null
         }
         Relationships: [
           {
@@ -737,7 +671,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          role?: Database["public"]["Enums"]["app_role"]
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
@@ -752,6 +686,7 @@ export type Database = {
           active: boolean | null
           category: string | null
           code: string | null
+          created_at: string | null
           id: string
           label_ar: string | null
           label_fr: string
@@ -761,6 +696,7 @@ export type Database = {
           active?: boolean | null
           category?: string | null
           code?: string | null
+          created_at?: string | null
           id?: string
           label_ar?: string | null
           label_fr: string
@@ -770,6 +706,7 @@ export type Database = {
           active?: boolean | null
           category?: string | null
           code?: string | null
+          created_at?: string | null
           id?: string
           label_ar?: string | null
           label_fr?: string
@@ -783,36 +720,30 @@ export type Database = {
           display_order: number | null
           id: string
           legal_basis: string | null
-          notes: string | null
           pv_id: string
           severity_level: string | null
           violation_category: string | null
           violation_label: string
-          violation_reference_id: string | null
         }
         Insert: {
           created_at?: string | null
           display_order?: number | null
           id?: string
           legal_basis?: string | null
-          notes?: string | null
           pv_id: string
           severity_level?: string | null
           violation_category?: string | null
           violation_label: string
-          violation_reference_id?: string | null
         }
         Update: {
           created_at?: string | null
           display_order?: number | null
           id?: string
           legal_basis?: string | null
-          notes?: string | null
           pv_id?: string
           severity_level?: string | null
           violation_category?: string | null
           violation_label?: string
-          violation_reference_id?: string | null
         }
         Relationships: [
           {
@@ -820,13 +751,6 @@ export type Database = {
             columns: ["pv_id"]
             isOneToOne: false
             referencedRelation: "pv"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "violations_violation_reference_id_fkey"
-            columns: ["violation_reference_id"]
-            isOneToOne: false
-            referencedRelation: "violation_reference"
             referencedColumns: ["id"]
           },
         ]
@@ -837,13 +761,9 @@ export type Database = {
     }
     Functions: {
       admin_update_user_roles: {
-        Args: {
-          _roles: Database["public"]["Enums"]["app_role"][]
-          _target_user_id: string
-        }
+        Args: { _roles: string[]; _target_user_id: string }
         Returns: undefined
       }
-      get_user_department: { Args: { _user_id: string }; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
