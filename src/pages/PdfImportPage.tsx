@@ -383,7 +383,7 @@ const PdfImportPage = () => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "queued" } : f)); }}
+                      onClick={(e) => { e.stopPropagation(); retryFile(fileItem); }}
                     >
                       <RotateCcw className="h-4 w-4" />
                       إعادة
