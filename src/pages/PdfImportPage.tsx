@@ -376,15 +376,7 @@ const PdfImportPage = () => {
                   )}
 
                   {fileItem.status === "queued" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); processFile(fileItem.id); }}
-                      disabled={!!processingId}
-                    >
-                      {processingId === fileItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      تحليل
-                    </Button>
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
                   )}
 
                   {fileItem.status === "error" && (
