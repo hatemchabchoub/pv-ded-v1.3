@@ -55,56 +55,15 @@ const PdfImportPage = () => {
     },
   });
 
-  const handleFilesSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = e.target.files;
-    if (!selectedFiles || selectedFiles.length === 0) return;
-
-    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-    const newItems: FileImportItem[] = [];
-
-    for (let i = 0; i < selectedFiles.length; i++) {
-      const file = selectedFiles[i];
-      if (!allowed.includes(file.type)) {
-        toast.error(`${file.name}: صيغة غير مدعومة`);
-        continue;
-      }
-      if (file.size > 20 * 1024 * 1024) {
-        toast.error(`${file.name}: الملف كبير جدا (الحد الأقصى 20 ميقا)`);
-        continue;
-      }
-      newItems.push({
-        id: crypto.randomUUID(),
-        file,
-        fileName: file.name,
-        status: "queued",
-        importId: null,
-        extractedData: null,
-        confidenceData: {},
-        overallConfidence: 0,
-        fieldCandidates: [],
-        editedValues: {},
-      });
-    }
-
-    if (newItems.length > 0) {
-      setFiles((prev) => [...prev, ...newItems]);
-      toast.success(`تمت إضافة ${newItems.length} ملف(ات)`);
-    }
-
-    // Reset input
-    e.target.value = "";
-  }, []);
-
-  const processFile = useCallback(async (fileId: string) => {
+  const processFileItem = useCallback(async (fileItem: FileImportItem) => {
     if (!user) return;
+
+    const fileId = fileItem.id;
 
     setFiles((prev) =>
       prev.map((f) => (f.id === fileId ? { ...f, status: "uploading" } : f))
     );
     setProcessingId(fileId);
-
-    const fileItem = files.find((f) => f.id === fileId);
-    if (!fileItem) return;
 
     try {
       // Upload to storage
@@ -182,14 +141,57 @@ const PdfImportPage = () => {
     } finally {
       setProcessingId(null);
     }
-  }, [user, files, queryClient]);
+  }, [user, queryClient]);
 
-  const processAllQueued = useCallback(async () => {
-    const queued = files.filter((f) => f.status === "queued");
-    for (const f of queued) {
-      await processFile(f.id);
+  const retryFile = useCallback(async (fileItem: FileImportItem) => {
+    setFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "queued" } : f));
+    await processFileItem({ ...fileItem, status: "queued" });
+  }, [processFileItem]);
+
+  const handleFilesSelect = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = e.target.files;
+    if (!selectedFiles || selectedFiles.length === 0) return;
+
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    const newItems: FileImportItem[] = [];
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      const file = selectedFiles[i];
+      if (!allowed.includes(file.type)) {
+        toast.error(`${file.name}: صيغة غير مدعومة`);
+        continue;
+      }
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error(`${file.name}: الملف كبير جدا (الحد الأقصى 20 ميقا)`);
+        continue;
+      }
+      newItems.push({
+        id: crypto.randomUUID(),
+        file,
+        fileName: file.name,
+        status: "queued",
+        importId: null,
+        extractedData: null,
+        confidenceData: {},
+        overallConfidence: 0,
+        fieldCandidates: [],
+        editedValues: {},
+      });
     }
-  }, [files, processFile]);
+
+    if (newItems.length > 0) {
+      setFiles((prev) => [...prev, ...newItems]);
+      toast.success(`تمت إضافة ${newItems.length} ملف(ات) — جاري التحليل...`);
+
+      // Auto-process all new files sequentially
+      for (const item of newItems) {
+        await processFileItem(item);
+      }
+    }
+
+    // Reset input
+    e.target.value = "";
+  }, [processFileItem]);
 
   const removeFile = (fileId: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== fileId));
@@ -325,16 +327,6 @@ const PdfImportPage = () => {
                 )}
               </div>
             </div>
-            {queuedCount > 0 && (
-              <Button
-                size="sm"
-                onClick={processAllQueued}
-                disabled={!!processingId}
-              >
-                {processingId ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                تحليل الكل ({queuedCount})
-              </Button>
-            )}
           </div>
 
           <div className="surface-elevated divide-y divide-border">
@@ -384,22 +376,14 @@ const PdfImportPage = () => {
                   )}
 
                   {fileItem.status === "queued" && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={(e) => { e.stopPropagation(); processFile(fileItem.id); }}
-                      disabled={!!processingId}
-                    >
-                      {processingId === fileItem.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                      تحليل
-                    </Button>
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
                   )}
 
                   {fileItem.status === "error" && (
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={(e) => { e.stopPropagation(); setFiles(prev => prev.map(f => f.id === fileItem.id ? { ...f, status: "queued" } : f)); }}
+                      onClick={(e) => { e.stopPropagation(); retryFile(fileItem); }}
                     >
                       <RotateCcw className="h-4 w-4" />
                       إعادة
