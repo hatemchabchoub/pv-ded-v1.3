@@ -256,6 +256,20 @@ const PvWizardPage = () => {
     setSaving(true);
 
     try {
+      // Check for duplicate pv_number
+      const { data: existing } = await supabase
+        .from("pv")
+        .select("id")
+        .eq("pv_number", pvNumber.trim())
+        .limit(1);
+
+      if (existing && existing.length > 0) {
+        setSaving(false);
+        toast.error("هذا العدد موجود مسبقا — يرجى استخدام عدد محضر آخر");
+        setErrors(["عدد المحضر موجود مسبقا في قاعدة البيانات"]);
+        return;
+      }
+
       const dept = departments?.find(d => d.id === departmentId);
       const deptCode = dept?.code || "UNK";
       const year = pvDate?.substring(0, 4) || new Date().getFullYear();
