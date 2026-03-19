@@ -216,10 +216,7 @@ const PdfImportPage = () => {
       prev.map((f) => (f.id === fileItem.id ? { ...f, status: "validated" } : f))
     );
 
-    // Store prefill data in sessionStorage and open in new tab so we keep state here
-    localStorage.setItem("pv_prefill", JSON.stringify({ prefill: data, importId: fileItem.importId }));
-    window.open("/pv/new?from=ocr", "_blank");
-    toast.success("تم فتح استمارة المحضر في نافذة جديدة");
+    navigate("/pv/new", { state: { prefill: data, importId: fileItem.importId } });
   };
 
   const activeFile = files.find((f) => f.id === activeFileId);
