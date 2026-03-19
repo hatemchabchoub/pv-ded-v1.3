@@ -90,9 +90,9 @@ const PdfImportPage = () => {
       setFiles((prev) => [...prev, ...newItems]);
       toast.success(`تمت إضافة ${newItems.length} ملف(ات) — جاري التحليل...`);
 
-      // Auto-process all new files
+      // Auto-process all new files sequentially
       for (const item of newItems) {
-        processFile(item.id);
+        await processFileItem(item);
       }
     }
 
