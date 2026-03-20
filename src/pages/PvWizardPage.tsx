@@ -1037,8 +1037,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 4: Review */}
-      {currentStep === 4 && (
+      {/* Step 5: Review */}
+      {currentStep === 5 && (
         <div className="space-y-4">
           <div className="surface-elevated p-6 space-y-4">
             <h2 className="text-sm font-medium mb-3">ملخص المحضر</h2>
