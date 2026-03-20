@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,16 +7,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-import { Plus, Trash2, ArrowLeft, ArrowRight, Save, Check, AlertCircle } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, ArrowRight, Save, Check, AlertCircle, Upload, FileText, Loader2, CheckCircle2, XCircle, Shield, SkipForward } from "lucide-react";
 import ParentPvSelector from "@/components/pv/ParentPvSelector";
 import { AutocompleteWithAdd, AutocompleteOption } from "@/components/ui/autocomplete-with-add";
 import { toast } from "sonner";
 
 const steps = [
+  "استخراج من وثيقة",
   "المعلومات العامة",
   "المخالفون",
   "المخالفات",
@@ -61,6 +64,16 @@ const PvWizardPage = () => {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
   const [sourceImportId, setSourceImportId] = useState<string | null>(null);
+
+  // OCR step state
+  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<"idle" | "uploading" | "processing" | "extracted" | "error">("idle");
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrExtracted, setOcrExtracted] = useState<any>(null);
+  const [ocrConfidence, setOcrConfidence] = useState(0);
+  const [ocrError, setOcrError] = useState("");
+  const ocrFileInputRef = useRef<HTMLInputElement>(null);
+  const [ocrSkipped, setOcrSkipped] = useState(false);
 
   const [pvNumber, setPvNumber] = useState("");
   const [pvDate, setPvDate] = useState(new Date().toISOString().split("T")[0]);
@@ -126,9 +139,109 @@ const PvWizardPage = () => {
         })));
       }
       if (importId) setSourceImportId(importId);
+      setOcrSkipped(true);
+      setCurrentStep(1);
       toast.success("تم ملء البيانات تلقائيا من الاستخراج");
     }
   }, [location.state]);
+
+  const applyExtractedData = useCallback((p: any, importId?: string) => {
+    if (p.pv_number) setPvNumber(p.pv_number);
+    if (p.pv_date) setPvDate(p.pv_date);
+    if (p.pv_type) setPvType(p.pv_type);
+    if (p.referral_type) setReferralType(p.referral_type);
+    if (p.notes) setNotes(p.notes);
+    if (p.offenders?.length) {
+      setOffenders(p.offenders.map((o: any) => ({
+        name_or_company: o.name_or_company || "", identifier: o.identifier || "",
+        person_type: o.person_type || "physical", city: o.city || "", address: o.address || "",
+      })));
+    }
+    if (p.violations?.length) {
+      setViolations(p.violations.map((v: any) => ({
+        violation_label: v.violation_label || "", violation_category: v.violation_category || "",
+        legal_basis: v.legal_basis || "", severity_level: v.severity_level || "",
+      })));
+    }
+    if (p.seizures?.length) {
+      setSeizures(p.seizures.map((s: any) => ({
+        goods_category: s.goods_category || "", goods_type: s.goods_type || "",
+        quantity: String(s.quantity || ""), unit: s.unit || "",
+        estimated_value: String(s.estimated_value || ""), seizure_type: s.seizure_type || "actual",
+      })));
+    }
+    if (importId) setSourceImportId(importId);
+  }, []);
+
+  const handleOcrUpload = useCallback(async (file: File) => {
+    if (!user) return;
+    setOcrFile(file);
+    setOcrStatus("uploading");
+    setOcrProgress(10);
+    setOcrError("");
+
+    try {
+      const storagePath = `ocr-imports/${user.id}/${Date.now()}_${file.name}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("pv-attachments")
+        .upload(storagePath, file);
+      if (uploadErr) throw uploadErr;
+      setOcrProgress(30);
+
+      const { data: importRec, error: importErr } = await supabase
+        .from("document_imports")
+        .insert({
+          import_type: "pdf",
+          source_file_name: file.name,
+          storage_path: storagePath,
+          uploaded_by: user.id,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (importErr) throw importErr;
+
+      setOcrStatus("processing");
+      setOcrProgress(50);
+
+      const { data: extractResult, error: extractErr } = await supabase.functions.invoke("ocr-extract", {
+        body: { import_id: importRec.id },
+      });
+
+      if (extractErr) throw new Error(extractErr.message);
+      if (extractResult?.error) throw new Error(extractResult.error);
+
+      setOcrProgress(90);
+      setSourceImportId(importRec.id);
+      setOcrExtracted(extractResult.extracted);
+      setOcrConfidence(extractResult.overall_confidence || 50);
+      setOcrStatus("extracted");
+      setOcrProgress(100);
+
+      applyExtractedData(extractResult.extracted, importRec.id);
+      toast.success(`تم الاستخراج بنجاح — الثقة ${extractResult.overall_confidence}%`);
+    } catch (err: any) {
+      setOcrStatus("error");
+      setOcrError(err.message || "خطأ غير معروف");
+      toast.error(err.message || "خطأ في الاستخراج");
+    }
+  }, [user, applyExtractedData]);
+
+  const handleOcrFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("صيغة غير مدعومة — يرجى تحميل PDF أو صورة");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("الحد الأقصى لحجم الملف هو 20 ميغابايت");
+      return;
+    }
+    handleOcrUpload(file);
+    e.target.value = "";
+  }, [handleOcrUpload]);
 
   const { data: departments, refetch: refetchDepartments } = useQuery({
     queryKey: ["ref-departments"],
@@ -389,8 +502,189 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 0: General */}
+      {/* Step 0: OCR Upload */}
       {currentStep === 0 && (
+        <div className="space-y-4">
+          {ocrStatus === "idle" && !ocrSkipped && (
+            <div className="surface-elevated p-8 flex flex-col items-center gap-4 border-2 border-dashed border-border">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Upload className="h-10 w-10 text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="font-medium">قم بتحميل وثيقة محضر لاستخراج البيانات تلقائيا</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  PDF أو صورة (JPG, PNG) — الحد الأقصى 20 ميغابايت
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <label className="cursor-pointer">
+                  <Button asChild>
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      تحميل وثيقة
+                    </span>
+                  </Button>
+                  <input
+                    ref={ocrFileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleOcrFileSelect}
+                    className="hidden"
+                  />
+                </label>
+                <Button variant="outline" onClick={() => { setOcrSkipped(true); setCurrentStep(1); }}>
+                  <SkipForward className="h-4 w-4" />
+                  تخطي — إدخال يدوي
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {(ocrStatus === "uploading" || ocrStatus === "processing") && (
+            <div className="surface-elevated p-8 flex flex-col items-center gap-4">
+              <Loader2 className="h-10 w-10 text-primary animate-spin" />
+              <div className="text-center">
+                <p className="font-medium">
+                  {ocrStatus === "uploading" ? "جاري تحميل الملف..." : "جاري التحليل الذكي..."}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">{ocrFile?.name}</p>
+              </div>
+              <div className="w-full max-w-md">
+                <Progress value={ocrProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center mt-1">{ocrProgress}%</p>
+              </div>
+            </div>
+          )}
+
+          {ocrStatus === "error" && (
+            <div className="surface-elevated p-8 flex flex-col items-center gap-4">
+              <XCircle className="h-10 w-10 text-destructive" />
+              <div className="text-center">
+                <p className="font-medium text-destructive">فشل الاستخراج</p>
+                <p className="text-sm text-muted-foreground mt-1">{ocrError}</p>
+              </div>
+              <div className="flex gap-3">
+                <label className="cursor-pointer">
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      إعادة المحاولة
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleOcrFileSelect}
+                    className="hidden"
+                  />
+                </label>
+                <Button variant="outline" onClick={() => { setOcrSkipped(true); setCurrentStep(1); }}>
+                  <SkipForward className="h-4 w-4" />
+                  تخطي — إدخال يدوي
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {ocrStatus === "extracted" && (
+            <div className="surface-elevated p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-primary" />
+                  <div>
+                    <p className="font-medium">تم الاستخراج بنجاح</p>
+                    <p className="text-sm text-muted-foreground">{ocrFile?.name}</p>
+                  </div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`text-sm ${
+                    ocrConfidence >= 80 ? "border-primary/30 text-primary"
+                      : ocrConfidence >= 50 ? "border-amber-500/30 text-amber-600"
+                      : "border-destructive/30 text-destructive"
+                  }`}
+                >
+                  <Shield className="h-3.5 w-3.5 me-1" />
+                  الثقة: {ocrConfidence}%
+                </Badge>
+              </div>
+
+              <div className="bg-primary/5 border border-primary/10 rounded-sm p-4 text-sm text-center">
+                <p>تم ملء الحقول تلقائيا من الوثيقة — يمكنك مراجعتها وتعديلها في الخطوات التالية</p>
+              </div>
+
+              {ocrExtracted && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  {ocrExtracted.pv_number && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">عدد المحضر</span>
+                      <p className="font-medium">{ocrExtracted.pv_number}</p>
+                    </div>
+                  )}
+                  {ocrExtracted.pv_date && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">التاريخ</span>
+                      <p className="font-medium">{ocrExtracted.pv_date}</p>
+                    </div>
+                  )}
+                  {ocrExtracted.officer_name && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">الضابط</span>
+                      <p className="font-medium">{ocrExtracted.officer_name}</p>
+                    </div>
+                  )}
+                  {ocrExtracted.offenders?.length > 0 && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">المخالفون</span>
+                      <p className="font-medium">{ocrExtracted.offenders.length} مخالف</p>
+                    </div>
+                  )}
+                  {ocrExtracted.violations?.length > 0 && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">المخالفات</span>
+                      <p className="font-medium">{ocrExtracted.violations.length} مخالفة</p>
+                    </div>
+                  )}
+                  {ocrExtracted.seizures?.length > 0 && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">المحجوزات</span>
+                      <p className="font-medium">{ocrExtracted.seizures.length} بضاعة</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button className="w-full" onClick={() => setCurrentStep(1)}>
+                متابعة المراجعة
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {ocrSkipped && (
+            <div className="surface-elevated p-6 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">تم تخطي الاستخراج — يمكنك الإدخال يدويا</p>
+              <label className="cursor-pointer">
+                <Button variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="h-4 w-4" />
+                    تحميل وثيقة بدلا من ذلك
+                  </span>
+                </Button>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => { setOcrSkipped(false); handleOcrFileSelect(e); }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 1: General */}
+      {currentStep === 1 && (
         <div className="surface-elevated p-6 space-y-4">
           <h2 className="text-sm font-medium">{steps[0]}</h2>
           <div className="grid grid-cols-2 gap-4">
@@ -492,8 +786,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 1: Offenders */}
-      {currentStep === 1 && (
+      {/* Step 2: Offenders */}
+      {currentStep === 2 && (
         <div className="space-y-4">
           <h2 className="text-sm font-medium">المخالفون</h2>
           {offenders.map((o, i) => (
@@ -543,8 +837,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 2: Violations */}
-      {currentStep === 2 && (
+      {/* Step 3: Violations */}
+      {currentStep === 3 && (
         <div className="space-y-4">
           <h2 className="text-sm font-medium">المخالفات</h2>
           {violations.map((v, i) => (
@@ -635,8 +929,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 3: Seizures */}
-      {currentStep === 3 && (
+      {/* Step 4: Seizures */}
+      {currentStep === 4 && (
         <div className="space-y-4">
           <h2 className="text-sm font-medium">المحجوزات</h2>
           {seizures.map((s, i) => (
@@ -745,8 +1039,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 4: Review */}
-      {currentStep === 4 && (
+      {/* Step 5: Review */}
+      {currentStep === 5 && (
         <div className="space-y-4">
           <div className="surface-elevated p-6 space-y-4">
             <h2 className="text-sm font-medium mb-3">ملخص المحضر</h2>
@@ -797,33 +1091,35 @@ const PvWizardPage = () => {
       )}
 
       {/* Navigation */}
-      <div className="flex items-center justify-between pt-4 border-t">
-        <Button
-          variant="outline" size="sm"
-          onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-          disabled={currentStep === 0}
-        >
-          <ArrowRight className="h-4 w-4" />
-          السابق
-        </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => savePv("draft")} disabled={saving}>
-            <Save className="h-4 w-4" />
-            {saving ? "جاري الحفظ..." : "حفظ كمسودة"}
+      {currentStep > 0 && (
+        <div className="flex items-center justify-between pt-4 border-t">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            disabled={currentStep === 0}
+          >
+            <ArrowRight className="h-4 w-4" />
+            السابق
           </Button>
-          {currentStep < steps.length - 1 ? (
-            <Button size="sm" onClick={() => setCurrentStep(currentStep + 1)}>
-              التالي
-              <ArrowLeft className="h-4 w-4" />
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => savePv("draft")} disabled={saving}>
+              <Save className="h-4 w-4" />
+              {saving ? "جاري الحفظ..." : "حفظ كمسودة"}
             </Button>
-          ) : (
-            <Button size="sm" onClick={() => savePv("under_review")} disabled={saving}>
-              <Check className="h-4 w-4" />
-              {saving ? "جاري الحفظ..." : "تصديق وإنشاء"}
-            </Button>
-          )}
+            {currentStep < steps.length - 1 ? (
+              <Button size="sm" onClick={() => setCurrentStep(currentStep + 1)}>
+                التالي
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => savePv("under_review")} disabled={saving}>
+                <Check className="h-4 w-4" />
+                {saving ? "جاري الحفظ..." : "تصديق وإنشاء"}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
