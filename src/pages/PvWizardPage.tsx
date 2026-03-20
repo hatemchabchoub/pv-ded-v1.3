@@ -72,6 +72,7 @@ const PvWizardPage = () => {
   const [ocrExtracted, setOcrExtracted] = useState<any>(null);
   const [ocrConfidence, setOcrConfidence] = useState(0);
   const [ocrError, setOcrError] = useState("");
+  const [ocrStoragePath, setOcrStoragePath] = useState<string | null>(null);
   const ocrFileInputRef = useRef<HTMLInputElement>(null);
   const [ocrSkipped, setOcrSkipped] = useState(false);
 
@@ -186,6 +187,7 @@ const PvWizardPage = () => {
         .from("pv-attachments")
         .upload(storagePath, file);
       if (uploadErr) throw uploadErr;
+      setOcrStoragePath(storagePath);
       setOcrProgress(30);
 
       const { data: importRec, error: importErr } = await supabase
@@ -456,6 +458,18 @@ const PvWizardPage = () => {
         if (importLinkError) {
           toast.error("تم إنشاء المحضر لكن تعذر ربطه بسجل الاستيراد");
         }
+      }
+
+      // Attach the uploaded OCR file as a PV attachment
+      if (ocrStoragePath && ocrFile) {
+        await supabase.from("attachments").insert({
+          pv_id: pv.id,
+          file_name: ocrFile.name,
+          storage_path: ocrStoragePath,
+          file_size: ocrFile.size,
+          mime_type: ocrFile.type || "application/pdf",
+          uploaded_by: user.id,
+        });
       }
 
       queryClient.invalidateQueries({ queryKey: ["pv-list"] });
