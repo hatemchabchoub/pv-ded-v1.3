@@ -290,7 +290,98 @@ const PvWizardPage = () => {
     e.target.value = "";
   }, [handleOcrUpload]);
 
-  const { data: departments, refetch: refetchDepartments } = useQuery({
+  // AI Analysis: stream report from the uploaded raw text
+  const startAiAnalysis = useCallback(async () => {
+    if (!sourceImportId) return;
+    setAiAnalyzing(true);
+    setAiReport("");
+    setAiDone(false);
+    setAiProgress({ percent: 2, label: "بدء التحليل..." });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("يرجى تسجيل الدخول"); setAiAnalyzing(false); return; }
+
+      // Get raw text from the import record
+      const { data: importData } = await supabase
+        .from("document_imports")
+        .select("raw_text")
+        .eq("id", sourceImportId)
+        .single();
+
+      const rawText = importData?.raw_text || JSON.stringify(ocrExtracted || {}, null, 2);
+
+      const resp = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ rawTexts: [rawText] }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Unknown error" }));
+        toast.error(err.error || "خطأ في التحليل");
+        setAiAnalyzing(false);
+        return;
+      }
+
+      if (!resp.body) { toast.error("No response body"); setAiAnalyzing(false); return; }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              accumulated += content;
+              setAiReport(accumulated);
+              setAiProgress(computeAiProgress(accumulated));
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+      setAiDone(true);
+      toast.success("اكتمل التحليل الذكي");
+    } catch (e) {
+      console.error(e);
+      toast.error("خطأ في الاتصال بخدمة التحليل");
+    } finally {
+      setAiProgress({ percent: 100, label: "اكتمل التحليل" });
+      setAiAnalyzing(false);
+    }
+  }, [sourceImportId, ocrExtracted]);
+
+  // Auto-scroll AI results
+  useEffect(() => {
+    if (aiResultRef.current && aiAnalyzing) {
+      aiResultRef.current.scrollTop = aiResultRef.current.scrollHeight;
+    }
+  }, [aiReport, aiAnalyzing]);
+
+
     queryKey: ["ref-departments"],
     queryFn: async () => {
       const { data } = await supabase.from("departments").select("id, name_fr, name_ar, code").eq("active", true).order("name_fr");
