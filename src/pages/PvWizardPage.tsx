@@ -65,6 +65,16 @@ const PvWizardPage = () => {
   const [errors, setErrors] = useState<string[]>([]);
   const [sourceImportId, setSourceImportId] = useState<string | null>(null);
 
+  // OCR step state
+  const [ocrFile, setOcrFile] = useState<File | null>(null);
+  const [ocrStatus, setOcrStatus] = useState<"idle" | "uploading" | "processing" | "extracted" | "error">("idle");
+  const [ocrProgress, setOcrProgress] = useState(0);
+  const [ocrExtracted, setOcrExtracted] = useState<any>(null);
+  const [ocrConfidence, setOcrConfidence] = useState(0);
+  const [ocrError, setOcrError] = useState("");
+  const ocrFileInputRef = useRef<HTMLInputElement>(null);
+  const [ocrSkipped, setOcrSkipped] = useState(false);
+
   const [pvNumber, setPvNumber] = useState("");
   const [pvDate, setPvDate] = useState(new Date().toISOString().split("T")[0]);
   const [departmentId, setDepartmentId] = useState("");
