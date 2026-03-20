@@ -784,8 +784,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 1: Offenders */}
-      {currentStep === 1 && (
+      {/* Step 2: Offenders */}
+      {currentStep === 2 && (
         <div className="space-y-4">
           <h2 className="text-sm font-medium">المخالفون</h2>
           {offenders.map((o, i) => (
