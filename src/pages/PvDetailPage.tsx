@@ -424,9 +424,7 @@ const PvDetailPage = () => {
         )}
 
         <TabsContent value="attachments" className="mt-4">
-          <div className="surface-elevated p-8 text-center text-sm text-muted-foreground">
-            لا توجد مرفقات
-          </div>
+          <PvAttachments pvId={id!} canEdit={canEdit} />
         </TabsContent>
 
         <TabsContent value="audit" className="mt-4">
