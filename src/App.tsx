@@ -21,6 +21,7 @@ import AuditPage from "@/pages/AuditPage";
 import ReferencesPage from "@/pages/ReferencesPage";
 import UsersManagementPage from "@/pages/UsersManagementPage";
 import DatabaseBackupPage from "@/pages/DatabaseBackupPage";
+import ExtraAiPage from "@/pages/ExtraAiPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -114,6 +115,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/backup" element={<ProtectedRoute><AdminGuard><DatabaseBackupPage /></AdminGuard></ProtectedRoute>} />
+            <Route path="/extra-ai" element={<ProtectedRoute><AdminGuard><ExtraAiPage /></AdminGuard></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

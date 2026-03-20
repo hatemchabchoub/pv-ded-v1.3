@@ -58,6 +58,7 @@ const adminItems: NavItem[] = [
   { title: "المستخدمون", url: "/users", icon: Users, roles: ["admin"] },
   { title: "سجل المراجعة", url: "/audit", icon: Shield, roles: ["admin", "national_supervisor"] },
   { title: "النسخ الاحتياطي", url: "/backup", icon: DatabaseBackup, roles: ["admin"] },
+  { title: "التحليل الذكي", url: "/extra-ai", icon: Sparkles, roles: ["admin"] },
 ];
 
 export function AppSidebar() {
