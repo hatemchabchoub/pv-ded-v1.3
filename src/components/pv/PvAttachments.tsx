@@ -4,7 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Upload, FileDown, Trash2, FileText, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Upload, FileDown, Trash2, FileText, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
 interface PvAttachmentsProps {
@@ -23,6 +24,8 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
   const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewName, setPreviewName] = useState("");
 
   const { data: attachments, isLoading } = useQuery({
     queryKey: ["pv-attachments", pvId],
@@ -76,6 +79,27 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handlePreview = async (storagePath: string, fileName: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from("pv-attachments")
+        .download(storagePath);
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      setPreviewUrl(url);
+      setPreviewName(fileName);
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const closePreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewName("");
   };
 
   const handleDownload = async (storagePath: string, fileName: string) => {
@@ -148,7 +172,7 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
                 <TableHead>اسم الملف</TableHead>
                 <TableHead>الحجم</TableHead>
                 <TableHead>تاريخ الرفع</TableHead>
-                <TableHead className="w-24">إجراءات</TableHead>
+                <TableHead className="w-32">إجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -170,6 +194,16 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7"
+                        title="معاينة"
+                        onClick={() => handlePreview(att.storage_path, att.file_name)}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        title="تحميل"
                         onClick={() => handleDownload(att.storage_path, att.file_name)}
                       >
                         <FileDown className="h-3.5 w-3.5" />
@@ -179,6 +213,7 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 text-destructive"
+                          title="حذف"
                           onClick={() => handleDelete(att.id, att.storage_path)}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -192,6 +227,27 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
           </Table>
         </div>
       )}
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) closePreview(); }}>
+        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0">
+          <DialogHeader className="px-6 pt-6 pb-2">
+            <DialogTitle className="text-sm flex items-center gap-2">
+              <FileText className="h-4 w-4 text-destructive/70" />
+              {previewName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            {previewUrl && (
+              <iframe
+                src={previewUrl}
+                className="w-full h-full rounded-md border border-border"
+                title={previewName}
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
