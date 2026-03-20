@@ -7,6 +7,39 @@ interface Props {
   code: string;
 }
 
+/** Strip HTML tags, fix special chars, and clean node labels for valid Mermaid syntax */
+function sanitizeMermaidCode(raw: string): string {
+  let cleaned = raw;
+  // Remove HTML tags like <b>, </b>, <i>, </i>, <br>, <br/>, etc.
+  cleaned = cleaned.replace(/<\/?[a-zA-Z][^>]*\/?>/g, " ");
+  // Collapse multiple spaces
+  cleaned = cleaned.replace(/ {2,}/g, " ");
+  // Remove problematic characters inside node labels: replace content in [...] and {...} to remove special chars
+  // Fix lines: wrap unquoted labels containing special chars in quotes
+  const lines = cleaned.split("\n").map(line => {
+    // Skip empty/comment lines
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("%%") || trimmed === "end") return line;
+    // For node definitions with brackets: A[label] or A{label} or A(label)
+    // Wrap labels in quotes if they contain colons, parentheses, or other specials
+    return line.replace(/(\w+)\[([^\]"]+)\]/g, (_match, id, label) => {
+      const safeLabel = label.replace(/"/g, "'").trim();
+      return `${id}["${safeLabel}"]`;
+    }).replace(/(\w+)\{([^}"]+)\}/g, (_match, id, label) => {
+      const safeLabel = label.replace(/"/g, "'").trim();
+      return `${id}{"${safeLabel}"}`;
+    }).replace(/(\w+)\(([^)"]+)\)/g, (_match, id, label) => {
+      // Only wrap if label has special characters
+      if (/[:|,،/\\]/.test(label)) {
+        const safeLabel = label.replace(/"/g, "'").trim();
+        return `${id}("${safeLabel}")`;
+      }
+      return _match;
+    });
+  });
+  return lines.join("\n");
+}
+
 export default function MermaidGraph({ code }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
