@@ -190,7 +190,7 @@ export default function ExtraAiPage() {
 
     setAnalyzing(true);
     setResult("");
-
+    setProgress({ percent: 2, label: "بدء التحليل..." });
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
