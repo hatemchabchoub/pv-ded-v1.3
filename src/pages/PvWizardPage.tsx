@@ -114,6 +114,13 @@ const PvWizardPage = () => {
   const ocrFileInputRef = useRef<HTMLInputElement>(null);
   const [ocrSkipped, setOcrSkipped] = useState(false);
 
+  // AI analysis state
+  const [aiReport, setAiReport] = useState("");
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiProgress, setAiProgress] = useState({ percent: 0, label: "" });
+  const [aiDone, setAiDone] = useState(false);
+  const aiResultRef = useRef<HTMLDivElement>(null);
+
   const [pvNumber, setPvNumber] = useState("");
   const [pvDate, setPvDate] = useState(new Date().toISOString().split("T")[0]);
   const [departmentId, setDepartmentId] = useState("");
