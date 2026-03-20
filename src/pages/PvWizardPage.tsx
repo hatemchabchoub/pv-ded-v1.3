@@ -927,8 +927,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 3: Seizures */}
-      {currentStep === 3 && (
+      {/* Step 4: Seizures */}
+      {currentStep === 4 && (
         <div className="space-y-4">
           <h2 className="text-sm font-medium">المحجوزات</h2>
           {seizures.map((s, i) => (
