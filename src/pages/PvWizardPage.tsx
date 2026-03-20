@@ -72,6 +72,7 @@ const PvWizardPage = () => {
   const [ocrExtracted, setOcrExtracted] = useState<any>(null);
   const [ocrConfidence, setOcrConfidence] = useState(0);
   const [ocrError, setOcrError] = useState("");
+  const [ocrStoragePath, setOcrStoragePath] = useState<string | null>(null);
   const ocrFileInputRef = useRef<HTMLInputElement>(null);
   const [ocrSkipped, setOcrSkipped] = useState(false);
 
