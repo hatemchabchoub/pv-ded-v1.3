@@ -187,6 +187,7 @@ const PvWizardPage = () => {
         .from("pv-attachments")
         .upload(storagePath, file);
       if (uploadErr) throw uploadErr;
+      setOcrStoragePath(storagePath);
       setOcrProgress(30);
 
       const { data: importRec, error: importErr } = await supabase
