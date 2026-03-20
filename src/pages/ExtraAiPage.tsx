@@ -547,6 +547,29 @@ export default function ExtraAiPage() {
               )}
             </CardHeader>
             <CardContent>
+              {/* Progress bar during analysis */}
+              {analyzing && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">{progress.label}</span>
+                    <span className="font-mono text-primary font-bold">{progress.percent}%</span>
+                  </div>
+                  <Progress value={progress.percent} className="h-2.5" />
+                </div>
+              )}
+              {/* Show 100% briefly after completion */}
+              {!analyzing && result && progress.percent === 100 && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      {progress.label}
+                    </span>
+                    <span className="font-mono text-primary font-bold">100%</span>
+                  </div>
+                  <Progress value={100} className="h-2.5" />
+                </div>
+              )}
               <ScrollArea className="h-[500px]" ref={resultRef}>
                 {analyzing && !result && (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
