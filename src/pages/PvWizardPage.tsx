@@ -9,14 +9,52 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-import { Plus, Trash2, ArrowLeft, ArrowRight, Save, Check, AlertCircle, Upload, FileText, Loader2, CheckCircle2, XCircle, Shield, SkipForward } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, ArrowRight, Save, Check, AlertCircle, Upload, FileText, Loader2, CheckCircle2, XCircle, Shield, SkipForward, Brain, Download, Sparkles } from "lucide-react";
 import ParentPvSelector from "@/components/pv/ParentPvSelector";
 import { AutocompleteWithAdd, AutocompleteOption } from "@/components/ui/autocomplete-with-add";
+import ReactMarkdown from "react-markdown";
+import MermaidGraph from "@/components/extra-ai/MermaidGraph";
 import { toast } from "sonner";
+
+const AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pv-ai-analysis`;
+
+const SECTION_MARKERS = [
+  { pattern: /القسم 1|بطاقة مختصرة|المرحلة الأولى/, label: "بطاقة المحاضر", pct: 10 },
+  { pattern: /القسم 2|جدول الكيانات|المرحلة الثانية/, label: "استخراج الكيانات", pct: 22 },
+  { pattern: /القسم 3|التسلسل الزمني|المرحلة الثالثة/, label: "التسلسل الزمني", pct: 34 },
+  { pattern: /القسم 4|التحليل الوقائعي|المرحلة الرابعة/, label: "التحليل الوقائعي", pct: 46 },
+  { pattern: /القسم 5|التحليل المقارن|المرحلة الخامسة/, label: "التحليل المقارن", pct: 55 },
+  { pattern: /القسم 6|التناقضات|المرحلة السادسة/, label: "التناقضات", pct: 64 },
+  { pattern: /القسم 7|التقرير النهائي|المرحلة السابعة/, label: "التقرير النهائي", pct: 76 },
+  { pattern: /القسم 8|مخطط العلاقات|المرحلة الثامنة|```mermaid/, label: "مخطط العلاقات", pct: 88 },
+  { pattern: /القسم 9|التوصيات|المرحلة التاسعة/, label: "التوصيات", pct: 95 },
+];
+
+function computeAiProgress(text: string): { percent: number; label: string } {
+  if (!text) return { percent: 2, label: "بدء التحليل..." };
+  let best = { percent: 5, label: "قراءة المحاضر..." };
+  for (const marker of SECTION_MARKERS) {
+    if (marker.pattern.test(text)) best = { percent: marker.pct, label: marker.label };
+  }
+  return best;
+}
+
+function extractMermaidCode(markdown: string): string {
+  const regex = /```mermaid\s*\n([\s\S]*?)```/g;
+  const matches: string[] = [];
+  let m;
+  while ((m = regex.exec(markdown)) !== null) matches.push(m[1].trim());
+  return matches.join("\n\n");
+}
+
+function stripMermaidBlocks(markdown: string): string {
+  return markdown.replace(/```mermaid\s*\n[\s\S]*?```/g, "").trim();
+}
 
 const steps = [
   "استخراج من وثيقة",
@@ -75,6 +113,13 @@ const PvWizardPage = () => {
   const [ocrStoragePath, setOcrStoragePath] = useState<string | null>(null);
   const ocrFileInputRef = useRef<HTMLInputElement>(null);
   const [ocrSkipped, setOcrSkipped] = useState(false);
+
+  // AI analysis state
+  const [aiReport, setAiReport] = useState("");
+  const [aiAnalyzing, setAiAnalyzing] = useState(false);
+  const [aiProgress, setAiProgress] = useState({ percent: 0, label: "" });
+  const [aiDone, setAiDone] = useState(false);
+  const aiResultRef = useRef<HTMLDivElement>(null);
 
   const [pvNumber, setPvNumber] = useState("");
   const [pvDate, setPvDate] = useState(new Date().toISOString().split("T")[0]);
@@ -245,6 +290,97 @@ const PvWizardPage = () => {
     e.target.value = "";
   }, [handleOcrUpload]);
 
+  // AI Analysis: stream report from the uploaded raw text
+  const startAiAnalysis = useCallback(async () => {
+    if (!sourceImportId) return;
+    setAiAnalyzing(true);
+    setAiReport("");
+    setAiDone(false);
+    setAiProgress({ percent: 2, label: "بدء التحليل..." });
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { toast.error("يرجى تسجيل الدخول"); setAiAnalyzing(false); return; }
+
+      // Get raw text from the import record
+      const { data: importData } = await supabase
+        .from("document_imports")
+        .select("raw_text")
+        .eq("id", sourceImportId)
+        .single();
+
+      const rawText = importData?.raw_text || JSON.stringify(ocrExtracted || {}, null, 2);
+
+      const resp = await fetch(AI_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+          apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+        },
+        body: JSON.stringify({ rawTexts: [rawText] }),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Unknown error" }));
+        toast.error(err.error || "خطأ في التحليل");
+        setAiAnalyzing(false);
+        return;
+      }
+
+      if (!resp.body) { toast.error("No response body"); setAiAnalyzing(false); return; }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let accumulated = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              accumulated += content;
+              setAiReport(accumulated);
+              setAiProgress(computeAiProgress(accumulated));
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+      setAiDone(true);
+      toast.success("اكتمل التحليل الذكي");
+    } catch (e) {
+      console.error(e);
+      toast.error("خطأ في الاتصال بخدمة التحليل");
+    } finally {
+      setAiProgress({ percent: 100, label: "اكتمل التحليل" });
+      setAiAnalyzing(false);
+    }
+  }, [sourceImportId, ocrExtracted]);
+
+  // Auto-scroll AI results
+  useEffect(() => {
+    if (aiResultRef.current && aiAnalyzing) {
+      aiResultRef.current.scrollTop = aiResultRef.current.scrollHeight;
+    }
+  }, [aiReport, aiAnalyzing]);
+
   const { data: departments, refetch: refetchDepartments } = useQuery({
     queryKey: ["ref-departments"],
     queryFn: async () => {
@@ -406,6 +542,7 @@ const PvWizardPage = () => {
         total_precautionary_seizure: totalPrecautionary,
         notes: notes || null,
         source_import_type: sourceImportId ? "ocr" : "manual",
+        ai_analysis_report: aiReport || null,
         created_by: user.id,
       }).select("id").single();
 
@@ -668,10 +805,63 @@ const PvWizardPage = () => {
                 </div>
               )}
 
-              <Button className="w-full" onClick={() => setCurrentStep(1)}>
-                متابعة المراجعة
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+              {/* AI Analysis Section */}
+              <div className="border border-border rounded-sm p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-sm">التحليل الذكي للمحضر</span>
+                  </div>
+                  {!aiDone && !aiAnalyzing && (
+                    <Button size="sm" onClick={startAiAnalysis} disabled={!sourceImportId}>
+                      <Sparkles className="h-4 w-4" />
+                      إنشاء التقرير التحليلي
+                    </Button>
+                  )}
+                  {aiDone && (
+                    <Badge variant="outline" className="border-primary/30 text-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5 me-1" />
+                      تم إنشاء التقرير
+                    </Badge>
+                  )}
+                </div>
+
+                {aiAnalyzing && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{aiProgress.label}</span>
+                    </div>
+                    <Progress value={aiProgress.percent} className="h-2" />
+                  </div>
+                )}
+
+                {(aiAnalyzing || aiDone) && aiReport && (
+                  <ScrollArea className="h-[300px] border border-border rounded-sm p-3" ref={aiResultRef}>
+                    <div className="prose prose-sm max-w-none dark:prose-invert text-foreground [direction:rtl]">
+                      <ReactMarkdown>{stripMermaidBlocks(aiReport)}</ReactMarkdown>
+                    </div>
+                    {aiDone && extractMermaidCode(aiReport) && (
+                      <div className="mt-4">
+                        <MermaidGraph code={extractMermaidCode(aiReport)} />
+                      </div>
+                    )}
+                  </ScrollArea>
+                )}
+
+                {!aiAnalyzing && !aiDone && (
+                  <p className="text-xs text-muted-foreground">
+                    يمكنك إنشاء تقرير تحليلي ذكي للمحضر — سيتم حفظه تلقائيا مع المحضر الجديد
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button className="flex-1" onClick={() => setCurrentStep(1)}>
+                  متابعة المراجعة
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 
