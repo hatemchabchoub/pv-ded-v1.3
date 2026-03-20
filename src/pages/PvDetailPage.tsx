@@ -2,6 +2,7 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import PvPrintTemplate from "@/components/print/PvPrintTemplate";
 import PvRecapSummary from "@/components/pv/PvRecapSummary";
 import PvAttachments from "@/components/pv/PvAttachments";
+import PvAiReportTab from "@/components/pv/PvAiReportTab";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -229,6 +230,9 @@ const PvDetailPage = () => {
             <TabsTrigger value="recap">الفهرس التجميعي</TabsTrigger>
           )}
           <TabsTrigger value="attachments">المرفقات</TabsTrigger>
+          {pv.ai_analysis_report && (
+            <TabsTrigger value="ai-report">التقرير الذكي</TabsTrigger>
+          )}
           <TabsTrigger value="audit">السجل ({auditLogs?.length || 0})</TabsTrigger>
         </TabsList>
 
@@ -426,6 +430,12 @@ const PvDetailPage = () => {
         <TabsContent value="attachments" className="mt-4">
           <PvAttachments pvId={id!} canEdit={canEdit} />
         </TabsContent>
+
+        {pv.ai_analysis_report && (
+          <TabsContent value="ai-report" className="mt-4">
+            <PvAiReportTab report={pv.ai_analysis_report} pvNumber={pv.pv_number} />
+          </TabsContent>
+        )}
 
         <TabsContent value="audit" className="mt-4">
           <div className="surface-elevated">
