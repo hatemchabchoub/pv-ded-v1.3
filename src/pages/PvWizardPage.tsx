@@ -381,7 +381,7 @@ const PvWizardPage = () => {
     }
   }, [aiReport, aiAnalyzing]);
 
-
+  const { data: departments, refetch: refetchDepartments } = useQuery({
     queryKey: ["ref-departments"],
     queryFn: async () => {
       const { data } = await supabase.from("departments").select("id, name_fr, name_ar, code").eq("active", true).order("name_fr");
