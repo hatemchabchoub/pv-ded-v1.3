@@ -123,7 +123,6 @@ const PvDetailPage = () => {
     try {
       const { error } = await supabase.from("pv").update({
         case_status: newStatus,
-        updated_by: user.id,
       }).eq("id", id);
       if (error) throw error;
       // Audit log is now handled by server-side trigger
