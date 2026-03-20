@@ -93,6 +93,15 @@ const PvDetailPage = () => {
     enabled: !!id,
   });
 
+  const { data: attachments } = useQuery({
+    queryKey: ["pv-attachments-count", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("attachments").select("id").eq("pv_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
   // Child PVs (sub-PVs / أضلع)
   const { data: childPvs } = useQuery({
     queryKey: ["pv-children", id],
