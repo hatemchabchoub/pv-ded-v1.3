@@ -26,7 +26,12 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
   useEffect(() => {
     if (!open || !pdfUrl) return;
     setLoading(true);
-    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    const loadingTask = pdfjsLib.getDocument({
+      url: pdfUrl,
+      cMapUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/",
+      cMapPacked: true,
+      standardFontDataUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/",
+    });
     loadingTask.promise.then((doc) => {
       setPdfDoc(doc);
       setTotalPages(doc.numPages);
