@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import PvPrintTemplate from "@/components/print/PvPrintTemplate";
 import PvRecapSummary from "@/components/pv/PvRecapSummary";
+import PvAttachments from "@/components/pv/PvAttachments";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -423,9 +424,7 @@ const PvDetailPage = () => {
         )}
 
         <TabsContent value="attachments" className="mt-4">
-          <div className="surface-elevated p-8 text-center text-sm text-muted-foreground">
-            لا توجد مرفقات
-          </div>
+          <PvAttachments pvId={id!} canEdit={canEdit} />
         </TabsContent>
 
         <TabsContent value="audit" className="mt-4">
