@@ -20,6 +20,7 @@ import AnomaliesPage from "@/pages/AnomaliesPage";
 import AuditPage from "@/pages/AuditPage";
 import ReferencesPage from "@/pages/ReferencesPage";
 import UsersManagementPage from "@/pages/UsersManagementPage";
+import DatabaseBackupPage from "@/pages/DatabaseBackupPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -112,6 +113,7 @@ const App = () => (
                 </RoleGuard>
               </ProtectedRoute>
             } />
+            <Route path="/backup" element={<ProtectedRoute><AdminGuard><DatabaseBackupPage /></AdminGuard></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>

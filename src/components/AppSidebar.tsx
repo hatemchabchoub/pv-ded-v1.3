@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   LogOut,
   Database,
+  DatabaseBackup,
   User,
   Sparkles,
 } from "lucide-react";
@@ -56,6 +57,7 @@ const adminItems: NavItem[] = [
   { title: "المرجعيات", url: "/references", icon: Database, roles: ["admin"] },
   { title: "المستخدمون", url: "/users", icon: Users, roles: ["admin"] },
   { title: "سجل المراجعة", url: "/audit", icon: Shield, roles: ["admin", "national_supervisor"] },
+  { title: "النسخ الاحتياطي", url: "/backup", icon: DatabaseBackup, roles: ["admin"] },
 ];
 
 export function AppSidebar() {
