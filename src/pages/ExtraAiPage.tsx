@@ -266,6 +266,7 @@ export default function ExtraAiPage() {
       console.error(e);
       toast.error("خطأ في الاتصال بخدمة التحليل");
     } finally {
+      setProgress({ percent: 100, label: "اكتمل التحليل" });
       setAnalyzing(false);
     }
   }, [selectedIds, uploadedPdfs]);
