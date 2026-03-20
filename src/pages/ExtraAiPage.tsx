@@ -71,7 +71,7 @@ function computeProgress(text: string): { percent: number; label: string } {
   return best;
 }
 
-
+export default function ExtraAiPage() {
   const [pvList, setPvList] = useState<PvRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
