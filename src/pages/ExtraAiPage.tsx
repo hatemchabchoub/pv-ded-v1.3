@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -46,6 +47,30 @@ function extractMermaidCode(markdown: string): string {
   return matches.join("\n\n");
 }
 
+// Progress tracking: detect sections in streamed output
+const SECTION_MARKERS = [
+  { pattern: /القسم 1|بطاقة مختصرة|المرحلة الأولى/,  label: "بطاقة المحاضر", pct: 10 },
+  { pattern: /القسم 2|جدول الكيانات|المرحلة الثانية/, label: "استخراج الكيانات", pct: 22 },
+  { pattern: /القسم 3|التسلسل الزمني|المرحلة الثالثة/, label: "التسلسل الزمني", pct: 34 },
+  { pattern: /القسم 4|التحليل الوقائعي|المرحلة الرابعة/, label: "التحليل الوقائعي", pct: 46 },
+  { pattern: /القسم 5|التحليل المقارن|المرحلة الخامسة/, label: "التحليل المقارن", pct: 55 },
+  { pattern: /القسم 6|التناقضات|المرحلة السادسة/, label: "التناقضات", pct: 64 },
+  { pattern: /القسم 7|التقرير النهائي|المرحلة السابعة/, label: "التقرير النهائي", pct: 76 },
+  { pattern: /القسم 8|مخطط العلاقات|المرحلة الثامنة|```mermaid/, label: "مخطط العلاقات", pct: 88 },
+  { pattern: /القسم 9|التوصيات|المرحلة التاسعة/, label: "التوصيات", pct: 95 },
+];
+
+function computeProgress(text: string): { percent: number; label: string } {
+  if (!text) return { percent: 2, label: "بدء التحليل..." };
+  let best = { percent: 5, label: "قراءة المحاضر..." };
+  for (const marker of SECTION_MARKERS) {
+    if (marker.pattern.test(text)) {
+      best = { percent: marker.pct, label: marker.label };
+    }
+  }
+  return best;
+}
+
 export default function ExtraAiPage() {
   const [pvList, setPvList] = useState<PvRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -55,6 +80,7 @@ export default function ExtraAiPage() {
   const [search, setSearch] = useState("");
   const [uploadedPdfs, setUploadedPdfs] = useState<UploadedPdf[]>([]);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState({ percent: 0, label: "" });
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -164,7 +190,7 @@ export default function ExtraAiPage() {
 
     setAnalyzing(true);
     setResult("");
-
+    setProgress({ percent: 2, label: "بدء التحليل..." });
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -228,6 +254,7 @@ export default function ExtraAiPage() {
             if (content) {
               accumulated += content;
               setResult(accumulated);
+              setProgress(computeProgress(accumulated));
             }
           } catch {
             textBuffer = line + "\n" + textBuffer;
@@ -239,6 +266,7 @@ export default function ExtraAiPage() {
       console.error(e);
       toast.error("خطأ في الاتصال بخدمة التحليل");
     } finally {
+      setProgress({ percent: 100, label: "اكتمل التحليل" });
       setAnalyzing(false);
     }
   }, [selectedIds, uploadedPdfs]);
@@ -519,6 +547,29 @@ export default function ExtraAiPage() {
               )}
             </CardHeader>
             <CardContent>
+              {/* Progress bar during analysis */}
+              {analyzing && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium">{progress.label}</span>
+                    <span className="font-mono text-primary font-bold">{progress.percent}%</span>
+                  </div>
+                  <Progress value={progress.percent} className="h-2.5" />
+                </div>
+              )}
+              {/* Show 100% briefly after completion */}
+              {!analyzing && result && progress.percent === 100 && (
+                <div className="mb-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground font-medium flex items-center gap-1.5">
+                      <CheckCircle2 className="h-4 w-4 text-primary" />
+                      {progress.label}
+                    </span>
+                    <span className="font-mono text-primary font-bold">100%</span>
+                  </div>
+                  <Progress value={100} className="h-2.5" />
+                </div>
+              )}
               <ScrollArea className="h-[500px]" ref={resultRef}>
                 {analyzing && !result && (
                   <div className="flex flex-col items-center justify-center py-20 gap-3">
