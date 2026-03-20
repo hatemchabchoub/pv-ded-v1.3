@@ -1,6 +1,7 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import PvPrintTemplate from "@/components/print/PvPrintTemplate";
 import PvRecapSummary from "@/components/pv/PvRecapSummary";
+import PvAttachments from "@/components/pv/PvAttachments";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
