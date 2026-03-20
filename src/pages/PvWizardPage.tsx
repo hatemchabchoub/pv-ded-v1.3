@@ -139,6 +139,8 @@ const PvWizardPage = () => {
         })));
       }
       if (importId) setSourceImportId(importId);
+      setOcrSkipped(true);
+      setCurrentStep(1);
       toast.success("تم ملء البيانات تلقائيا من الاستخراج");
     }
   }, [location.state]);
