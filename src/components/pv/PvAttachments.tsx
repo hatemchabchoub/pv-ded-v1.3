@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import PdfPreviewDialog from "@/components/pv/PdfPreviewDialog";
 import { Upload, FileDown, Trash2, FileText, Loader2, Eye } from "lucide-react";
 import { toast } from "sonner";
 
