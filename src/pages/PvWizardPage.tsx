@@ -835,8 +835,8 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 2: Violations */}
-      {currentStep === 2 && (
+      {/* Step 3: Violations */}
+      {currentStep === 3 && (
         <div className="space-y-4">
           <h2 className="text-sm font-medium">المخالفات</h2>
           {violations.map((v, i) => (
