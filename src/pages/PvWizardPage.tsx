@@ -500,8 +500,189 @@ const PvWizardPage = () => {
         </div>
       )}
 
-      {/* Step 0: General */}
+      {/* Step 0: OCR Upload */}
       {currentStep === 0 && (
+        <div className="space-y-4">
+          {ocrStatus === "idle" && !ocrSkipped && (
+            <div className="surface-elevated p-8 flex flex-col items-center gap-4 border-2 border-dashed border-border">
+              <div className="p-4 bg-primary/10 rounded-full">
+                <Upload className="h-10 w-10 text-primary" />
+              </div>
+              <div className="text-center">
+                <p className="font-medium">قم بتحميل وثيقة محضر لاستخراج البيانات تلقائيا</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  PDF أو صورة (JPG, PNG) — الحد الأقصى 20 ميغابايت
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <label className="cursor-pointer">
+                  <Button asChild>
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      تحميل وثيقة
+                    </span>
+                  </Button>
+                  <input
+                    ref={ocrFileInputRef}
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleOcrFileSelect}
+                    className="hidden"
+                  />
+                </label>
+                <Button variant="outline" onClick={() => { setOcrSkipped(true); setCurrentStep(1); }}>
+                  <SkipForward className="h-4 w-4" />
+                  تخطي — إدخال يدوي
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {(ocrStatus === "uploading" || ocrStatus === "processing") && (
+            <div className="surface-elevated p-8 flex flex-col items-center gap-4">
+              <Loader2 className="h-10 w-10 text-primary animate-spin" />
+              <div className="text-center">
+                <p className="font-medium">
+                  {ocrStatus === "uploading" ? "جاري تحميل الملف..." : "جاري التحليل الذكي..."}
+                </p>
+                <p className="text-sm text-muted-foreground mt-1">{ocrFile?.name}</p>
+              </div>
+              <div className="w-full max-w-md">
+                <Progress value={ocrProgress} className="h-2" />
+                <p className="text-xs text-muted-foreground text-center mt-1">{ocrProgress}%</p>
+              </div>
+            </div>
+          )}
+
+          {ocrStatus === "error" && (
+            <div className="surface-elevated p-8 flex flex-col items-center gap-4">
+              <XCircle className="h-10 w-10 text-destructive" />
+              <div className="text-center">
+                <p className="font-medium text-destructive">فشل الاستخراج</p>
+                <p className="text-sm text-muted-foreground mt-1">{ocrError}</p>
+              </div>
+              <div className="flex gap-3">
+                <label className="cursor-pointer">
+                  <Button variant="outline" asChild>
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      إعادة المحاولة
+                    </span>
+                  </Button>
+                  <input
+                    type="file"
+                    accept=".pdf,.jpg,.jpeg,.png,.webp"
+                    onChange={handleOcrFileSelect}
+                    className="hidden"
+                  />
+                </label>
+                <Button variant="outline" onClick={() => { setOcrSkipped(true); setCurrentStep(1); }}>
+                  <SkipForward className="h-4 w-4" />
+                  تخطي — إدخال يدوي
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {ocrStatus === "extracted" && (
+            <div className="surface-elevated p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-6 w-6 text-primary" />
+                  <div>
+                    <p className="font-medium">تم الاستخراج بنجاح</p>
+                    <p className="text-sm text-muted-foreground">{ocrFile?.name}</p>
+                  </div>
+                </div>
+                <Badge
+                  variant="outline"
+                  className={`text-sm ${
+                    ocrConfidence >= 80 ? "border-primary/30 text-primary"
+                      : ocrConfidence >= 50 ? "border-amber-500/30 text-amber-600"
+                      : "border-destructive/30 text-destructive"
+                  }`}
+                >
+                  <Shield className="h-3.5 w-3.5 me-1" />
+                  الثقة: {ocrConfidence}%
+                </Badge>
+              </div>
+
+              <div className="bg-primary/5 border border-primary/10 rounded-sm p-4 text-sm text-center">
+                <p>تم ملء الحقول تلقائيا من الوثيقة — يمكنك مراجعتها وتعديلها في الخطوات التالية</p>
+              </div>
+
+              {ocrExtracted && (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                  {ocrExtracted.pv_number && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">عدد المحضر</span>
+                      <p className="font-medium">{ocrExtracted.pv_number}</p>
+                    </div>
+                  )}
+                  {ocrExtracted.pv_date && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">التاريخ</span>
+                      <p className="font-medium">{ocrExtracted.pv_date}</p>
+                    </div>
+                  )}
+                  {ocrExtracted.officer_name && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">الضابط</span>
+                      <p className="font-medium">{ocrExtracted.officer_name}</p>
+                    </div>
+                  )}
+                  {ocrExtracted.offenders?.length > 0 && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">المخالفون</span>
+                      <p className="font-medium">{ocrExtracted.offenders.length} مخالف</p>
+                    </div>
+                  )}
+                  {ocrExtracted.violations?.length > 0 && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">المخالفات</span>
+                      <p className="font-medium">{ocrExtracted.violations.length} مخالفة</p>
+                    </div>
+                  )}
+                  {ocrExtracted.seizures?.length > 0 && (
+                    <div className="p-2 bg-muted/50 rounded-sm">
+                      <span className="text-xs text-muted-foreground">المحجوزات</span>
+                      <p className="font-medium">{ocrExtracted.seizures.length} بضاعة</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <Button className="w-full" onClick={() => setCurrentStep(1)}>
+                متابعة المراجعة
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {ocrSkipped && (
+            <div className="surface-elevated p-6 text-center space-y-3">
+              <p className="text-sm text-muted-foreground">تم تخطي الاستخراج — يمكنك الإدخال يدويا</p>
+              <label className="cursor-pointer">
+                <Button variant="outline" size="sm" asChild>
+                  <span>
+                    <Upload className="h-4 w-4" />
+                    تحميل وثيقة بدلا من ذلك
+                  </span>
+                </Button>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png,.webp"
+                  onChange={(e) => { setOcrSkipped(false); handleOcrFileSelect(e); }}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Step 1: General */}
+      {currentStep === 1 && (
         <div className="surface-elevated p-6 space-y-4">
           <h2 className="text-sm font-medium">{steps[0]}</h2>
           <div className="grid grid-cols-2 gap-4">
