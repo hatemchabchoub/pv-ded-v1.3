@@ -14,7 +14,7 @@ import PvDetailPage from "@/pages/PvDetailPage";
 import PvWizardPage from "@/pages/PvWizardPage";
 import PvEditPage from "@/pages/PvEditPage";
 import ExcelImportPage from "@/pages/ExcelImportPage";
-import PdfImportPage from "@/pages/PdfImportPage";
+
 import ReportsPage from "@/pages/ReportsPage";
 import AnomaliesPage from "@/pages/AnomaliesPage";
 import AuditPage from "@/pages/AuditPage";
@@ -75,13 +75,8 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            <Route path="/import/pdf" element={
-              <ProtectedRoute>
-                <RoleGuard allowedRoles={["admin", "officer", "department_supervisor"]}>
-                  <PdfImportPage />
-                </RoleGuard>
-              </ProtectedRoute>
-            } />
+
+
             <Route path="/import/excel" element={
               <ProtectedRoute>
                 <RoleGuard allowedRoles={["admin", "officer", "department_supervisor"]}>
