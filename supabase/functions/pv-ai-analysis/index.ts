@@ -57,6 +57,7 @@ const SYSTEM_PROMPT = `أنت خبير تحقيق ديواني سامٍ مختص
 المرحلة السابعة — التقرير النهائي باللغة العربية بالهيكلة: عنوان، مقدمة، ملخص تنفيذي، تعريف بالمحاضر، وقائع، أطراف، وسائل نقل وبضائع ووثائق، تسلسل زمني، تحليل مقارن، تناقضات، تقييم تحليلي، خلاصة، توصيات.
 
 المرحلة الثامنة — المخطط البياني للعلاقات (مخطط نصي هرمي + مخطط Mermaid)
+هام جدا: يجب إنشاء مخطط Mermaid صالح تقنيا داخل كتلة كود مميزة بـ \`\`\`mermaid حيث يمكن عرضه مباشرة. استعمل graph TD وتجنب الأحرف الخاصة في أسماء العقد.
 
 المرحلة التاسعة — خلاصة الروابط الأهم
 
@@ -72,6 +73,52 @@ const SYSTEM_PROMPT = `أنت خبير تحقيق ديواني سامٍ مختص
 القسم 9: التوصيات
 
 ابدأ أولا ببناء جدول عمل داخلي ثم انتقل إلى التحليل الكامل.`;
+
+function buildPvText(pv: any, offenders: any[], violations: any[], seizures: any[]): string {
+  let text = `=== محضر رقم: ${pv.pv_number} ===\n`;
+  text += `التاريخ: ${pv.pv_date}\n`;
+  text += `النوع: ${pv.pv_type || "غير مذكور"}\n`;
+  text += `الحالة: ${pv.case_status || "غير مذكور"}\n`;
+  text += `الأولوية: ${pv.priority_level || "غير مذكور"}\n`;
+  text += `المرجع الداخلي: ${pv.internal_reference || "غير مذكور"}\n`;
+  text += `الإدارة: ${pv.departments?.name_ar || pv.departments?.name_fr || "غير مذكور"}\n`;
+  text += `الوحدة: ${pv.units?.name_ar || pv.units?.name_fr || "غير مذكور"}\n`;
+  text += `العون المحرر: ${pv.officers?.full_name || "غير مذكور"} - الرتبة: ${pv.officers?.rank_label || "غير مذكور"} - الرقم: ${pv.officers?.badge_number || "غير مذكور"}\n`;
+  text += `مصدر الإحالة: ${pv.referral_sources?.label_ar || pv.referral_sources?.label_fr || "غير مذكور"}\n`;
+  text += `نوع الإحالة: ${pv.referral_type || "غير مذكور"}\n`;
+  text += `مخالفة ديوانية: ${pv.customs_violation ? "نعم" : "لا"}\n`;
+  text += `مخالفة صرف: ${pv.currency_violation ? "نعم" : "لا"}\n`;
+  text += `مخالفة قانون عام: ${pv.public_law_violation ? "نعم" : "لا"}\n`;
+  text += `تجديد حجز: ${pv.seizure_renewal ? "نعم" : "لا"}\n`;
+  text += `القيمة الإجمالية للحجز الفعلي: ${pv.total_actual_seizure || 0}\n`;
+  text += `القيمة الإجمالية للحجز الافتراضي: ${pv.total_virtual_seizure || 0}\n`;
+  text += `القيمة الإجمالية للحجز التحفظي: ${pv.total_precautionary_seizure || 0}\n`;
+  text += `القيمة الإجمالية: ${pv.total_seizure || 0}\n`;
+  text += `ملاحظات: ${pv.notes || "لا توجد"}\n`;
+
+  if (offenders.length > 0) {
+    text += `\n--- المخالفون ---\n`;
+    for (const o of offenders) {
+      text += `• ${o.name_or_company} | النوع: ${o.person_type || "غير مذكور"} | المعرف: ${o.identifier || "غير مذكور"} | المدينة: ${o.city || "غير مذكور"} | العنوان: ${o.address || "غير مذكور"}\n`;
+    }
+  }
+
+  if (violations.length > 0) {
+    text += `\n--- المخالفات ---\n`;
+    for (const v of violations) {
+      text += `• ${v.violation_label} | الصنف: ${v.violation_category || "غير مذكور"} | الأساس القانوني: ${v.legal_basis || "غير مذكور"} | الخطورة: ${v.severity_level || "غير مذكور"}\n`;
+    }
+  }
+
+  if (seizures.length > 0) {
+    text += `\n--- المحجوزات ---\n`;
+    for (const s of seizures) {
+      text += `• الصنف: ${s.goods_category || "غير مذكور"} | النوع: ${s.goods_type || "غير مذكور"} | الكمية: ${s.quantity || 0} ${s.unit || ""} | القيمة: ${s.estimated_value || 0} | نوع الحجز: ${s.seizure_type || "غير مذكور"}\n`;
+    }
+  }
+
+  return text;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -99,7 +146,6 @@ serve(async (req) => {
       });
     }
 
-    // Verify user is admin
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -126,83 +172,56 @@ serve(async (req) => {
       });
     }
 
-    const { pvIds } = await req.json();
-    if (!pvIds || !Array.isArray(pvIds) || pvIds.length === 0) {
-      return new Response(JSON.stringify({ error: "pvIds array required" }), {
-        status: 400,
+    const body = await req.json();
+    const { pvIds, rawTexts, action, reportText, targetPvIds } = body;
+
+    // Action: save report to PV(s)
+    if (action === "save_report" && reportText && targetPvIds?.length > 0) {
+      for (const pvId of targetPvIds) {
+        await adminClient
+          .from("pv")
+          .update({ ai_analysis_report: reportText })
+          .eq("id", pvId);
+      }
+      return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Fetch PV data with related entities
+    // Build texts from PV database entries
     const pvTexts: string[] = [];
 
-    for (const pvId of pvIds) {
-      const [pvRes, offendersRes, violationsRes, seizuresRes] = await Promise.all([
-        adminClient.from("pv").select("*, departments(name_fr, name_ar), units(name_fr, name_ar), officers(full_name, badge_number, rank_label), referral_sources(label_fr, label_ar)").eq("id", pvId).single(),
-        adminClient.from("offenders").select("*").eq("pv_id", pvId).order("display_order"),
-        adminClient.from("violations").select("*").eq("pv_id", pvId).order("display_order"),
-        adminClient.from("seizures").select("*").eq("pv_id", pvId).order("display_order"),
-      ]);
+    if (pvIds && Array.isArray(pvIds) && pvIds.length > 0) {
+      for (const pvId of pvIds) {
+        const [pvRes, offendersRes, violationsRes, seizuresRes] = await Promise.all([
+          adminClient.from("pv").select("*, departments(name_fr, name_ar), units(name_fr, name_ar), officers(full_name, badge_number, rank_label), referral_sources(label_fr, label_ar)").eq("id", pvId).single(),
+          adminClient.from("offenders").select("*").eq("pv_id", pvId).order("display_order"),
+          adminClient.from("violations").select("*").eq("pv_id", pvId).order("display_order"),
+          adminClient.from("seizures").select("*").eq("pv_id", pvId).order("display_order"),
+        ]);
+        if (!pvRes.data) continue;
+        pvTexts.push(buildPvText(pvRes.data, offendersRes.data || [], violationsRes.data || [], seizuresRes.data || []));
+      }
+    }
 
-      if (!pvRes.data) continue;
-
-      const pv = pvRes.data;
-      let text = `=== محضر رقم: ${pv.pv_number} ===\n`;
-      text += `التاريخ: ${pv.pv_date}\n`;
-      text += `النوع: ${pv.pv_type || "غير مذكور"}\n`;
-      text += `الحالة: ${pv.case_status || "غير مذكور"}\n`;
-      text += `الأولوية: ${pv.priority_level || "غير مذكور"}\n`;
-      text += `المرجع الداخلي: ${pv.internal_reference || "غير مذكور"}\n`;
-      text += `الإدارة: ${(pv as any).departments?.name_ar || (pv as any).departments?.name_fr || "غير مذكور"}\n`;
-      text += `الوحدة: ${(pv as any).units?.name_ar || (pv as any).units?.name_fr || "غير مذكور"}\n`;
-      text += `العون المحرر: ${(pv as any).officers?.full_name || "غير مذكور"} - الرتبة: ${(pv as any).officers?.rank_label || "غير مذكور"} - الرقم: ${(pv as any).officers?.badge_number || "غير مذكور"}\n`;
-      text += `مصدر الإحالة: ${(pv as any).referral_sources?.label_ar || (pv as any).referral_sources?.label_fr || "غير مذكور"}\n`;
-      text += `نوع الإحالة: ${pv.referral_type || "غير مذكور"}\n`;
-      text += `مخالفة ديوانية: ${pv.customs_violation ? "نعم" : "لا"}\n`;
-      text += `مخالفة صرف: ${pv.currency_violation ? "نعم" : "لا"}\n`;
-      text += `مخالفة قانون عام: ${pv.public_law_violation ? "نعم" : "لا"}\n`;
-      text += `تجديد حجز: ${pv.seizure_renewal ? "نعم" : "لا"}\n`;
-      text += `القيمة الإجمالية للحجز الفعلي: ${pv.total_actual_seizure || 0}\n`;
-      text += `القيمة الإجمالية للحجز الافتراضي: ${pv.total_virtual_seizure || 0}\n`;
-      text += `القيمة الإجمالية للحجز التحفظي: ${pv.total_precautionary_seizure || 0}\n`;
-      text += `القيمة الإجمالية: ${pv.total_seizure || 0}\n`;
-      text += `ملاحظات: ${pv.notes || "لا توجد"}\n`;
-
-      if (offendersRes.data && offendersRes.data.length > 0) {
-        text += `\n--- المخالفون ---\n`;
-        for (const o of offendersRes.data) {
-          text += `• ${o.name_or_company} | النوع: ${o.person_type || "غير مذكور"} | المعرف: ${o.identifier || "غير مذكور"} | المدينة: ${o.city || "غير مذكور"} | العنوان: ${o.address || "غير مذكور"}\n`;
+    // Add raw text from uploaded PDFs
+    if (rawTexts && Array.isArray(rawTexts)) {
+      for (const rt of rawTexts) {
+        if (typeof rt === "string" && rt.trim()) {
+          pvTexts.push(`=== وثيقة مستوردة ===\n${rt}`);
         }
       }
-
-      if (violationsRes.data && violationsRes.data.length > 0) {
-        text += `\n--- المخالفات ---\n`;
-        for (const v of violationsRes.data) {
-          text += `• ${v.violation_label} | الصنف: ${v.violation_category || "غير مذكور"} | الأساس القانوني: ${v.legal_basis || "غير مذكور"} | الخطورة: ${v.severity_level || "غير مذكور"}\n`;
-        }
-      }
-
-      if (seizuresRes.data && seizuresRes.data.length > 0) {
-        text += `\n--- المحجوزات ---\n`;
-        for (const s of seizuresRes.data) {
-          text += `• الصنف: ${s.goods_category || "غير مذكور"} | النوع: ${s.goods_type || "غير مذكور"} | الكمية: ${s.quantity || 0} ${s.unit || ""} | القيمة: ${s.estimated_value || 0} | نوع الحجز: ${s.seizure_type || "غير مذكور"}\n`;
-        }
-      }
-
-      pvTexts.push(text);
     }
 
     if (pvTexts.length === 0) {
-      return new Response(JSON.stringify({ error: "No PV data found" }), {
-        status: 404,
+      return new Response(JSON.stringify({ error: "No data to analyze" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const userPrompt = `فيما يلي المحضر أو المحاضر المطلوب تحليلها:\n\n${pvTexts.join("\n\n")}`;
 
-    // Call Lovable AI with streaming
     const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
