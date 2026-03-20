@@ -542,6 +542,7 @@ const PvWizardPage = () => {
         total_precautionary_seizure: totalPrecautionary,
         notes: notes || null,
         source_import_type: sourceImportId ? "ocr" : "manual",
+        ai_analysis_report: aiReport || null,
         created_by: user.id,
       }).select("id").single();
 
