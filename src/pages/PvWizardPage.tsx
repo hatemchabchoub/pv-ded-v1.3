@@ -460,6 +460,18 @@ const PvWizardPage = () => {
         }
       }
 
+      // Attach the uploaded OCR file as a PV attachment
+      if (ocrStoragePath && ocrFile) {
+        await supabase.from("attachments").insert({
+          pv_id: pv.id,
+          file_name: ocrFile.name,
+          storage_path: ocrStoragePath,
+          file_size: ocrFile.size,
+          mime_type: ocrFile.type || "application/pdf",
+          uploaded_by: user.id,
+        });
+      }
+
       queryClient.invalidateQueries({ queryKey: ["pv-list"] });
       toast.success(status === "draft" ? "تم حفظ المحضر كمسودة" : "تم إنشاء المحضر وتقديمه للمراجعة");
       navigate(`/pv/${pv.id}`);
