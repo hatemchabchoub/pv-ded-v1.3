@@ -804,10 +804,63 @@ const PvWizardPage = () => {
                 </div>
               )}
 
-              <Button className="w-full" onClick={() => setCurrentStep(1)}>
-                متابعة المراجعة
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
+              {/* AI Analysis Section */}
+              <div className="border border-border rounded-sm p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Brain className="h-5 w-5 text-primary" />
+                    <span className="font-medium text-sm">التحليل الذكي للمحضر</span>
+                  </div>
+                  {!aiDone && !aiAnalyzing && (
+                    <Button size="sm" onClick={startAiAnalysis} disabled={!sourceImportId}>
+                      <Sparkles className="h-4 w-4" />
+                      إنشاء التقرير التحليلي
+                    </Button>
+                  )}
+                  {aiDone && (
+                    <Badge variant="outline" className="border-primary/30 text-primary">
+                      <CheckCircle2 className="h-3.5 w-3.5 me-1" />
+                      تم إنشاء التقرير
+                    </Badge>
+                  )}
+                </div>
+
+                {aiAnalyzing && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>{aiProgress.label}</span>
+                    </div>
+                    <Progress value={aiProgress.percent} className="h-2" />
+                  </div>
+                )}
+
+                {(aiAnalyzing || aiDone) && aiReport && (
+                  <ScrollArea className="h-[300px] border border-border rounded-sm p-3" ref={aiResultRef}>
+                    <div className="prose prose-sm max-w-none dark:prose-invert text-foreground [direction:rtl]">
+                      <ReactMarkdown>{stripMermaidBlocks(aiReport)}</ReactMarkdown>
+                    </div>
+                    {aiDone && extractMermaidCode(aiReport) && (
+                      <div className="mt-4">
+                        <MermaidGraph code={extractMermaidCode(aiReport)} />
+                      </div>
+                    )}
+                  </ScrollArea>
+                )}
+
+                {!aiAnalyzing && !aiDone && (
+                  <p className="text-xs text-muted-foreground">
+                    يمكنك إنشاء تقرير تحليلي ذكي للمحضر — سيتم حفظه تلقائيا مع المحضر الجديد
+                  </p>
+                )}
+              </div>
+
+              <div className="flex gap-3">
+                <Button className="flex-1" onClick={() => setCurrentStep(1)}>
+                  متابعة المراجعة
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
 
