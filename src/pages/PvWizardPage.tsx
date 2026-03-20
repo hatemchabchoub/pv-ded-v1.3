@@ -9,14 +9,52 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 
-import { Plus, Trash2, ArrowLeft, ArrowRight, Save, Check, AlertCircle, Upload, FileText, Loader2, CheckCircle2, XCircle, Shield, SkipForward } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, ArrowRight, Save, Check, AlertCircle, Upload, FileText, Loader2, CheckCircle2, XCircle, Shield, SkipForward, Brain, Download, Sparkles } from "lucide-react";
 import ParentPvSelector from "@/components/pv/ParentPvSelector";
 import { AutocompleteWithAdd, AutocompleteOption } from "@/components/ui/autocomplete-with-add";
+import ReactMarkdown from "react-markdown";
+import MermaidGraph from "@/components/extra-ai/MermaidGraph";
 import { toast } from "sonner";
+
+const AI_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/pv-ai-analysis`;
+
+const SECTION_MARKERS = [
+  { pattern: /القسم 1|بطاقة مختصرة|المرحلة الأولى/, label: "بطاقة المحاضر", pct: 10 },
+  { pattern: /القسم 2|جدول الكيانات|المرحلة الثانية/, label: "استخراج الكيانات", pct: 22 },
+  { pattern: /القسم 3|التسلسل الزمني|المرحلة الثالثة/, label: "التسلسل الزمني", pct: 34 },
+  { pattern: /القسم 4|التحليل الوقائعي|المرحلة الرابعة/, label: "التحليل الوقائعي", pct: 46 },
+  { pattern: /القسم 5|التحليل المقارن|المرحلة الخامسة/, label: "التحليل المقارن", pct: 55 },
+  { pattern: /القسم 6|التناقضات|المرحلة السادسة/, label: "التناقضات", pct: 64 },
+  { pattern: /القسم 7|التقرير النهائي|المرحلة السابعة/, label: "التقرير النهائي", pct: 76 },
+  { pattern: /القسم 8|مخطط العلاقات|المرحلة الثامنة|```mermaid/, label: "مخطط العلاقات", pct: 88 },
+  { pattern: /القسم 9|التوصيات|المرحلة التاسعة/, label: "التوصيات", pct: 95 },
+];
+
+function computeAiProgress(text: string): { percent: number; label: string } {
+  if (!text) return { percent: 2, label: "بدء التحليل..." };
+  let best = { percent: 5, label: "قراءة المحاضر..." };
+  for (const marker of SECTION_MARKERS) {
+    if (marker.pattern.test(text)) best = { percent: marker.pct, label: marker.label };
+  }
+  return best;
+}
+
+function extractMermaidCode(markdown: string): string {
+  const regex = /```mermaid\s*\n([\s\S]*?)```/g;
+  const matches: string[] = [];
+  let m;
+  while ((m = regex.exec(markdown)) !== null) matches.push(m[1].trim());
+  return matches.join("\n\n");
+}
+
+function stripMermaidBlocks(markdown: string): string {
+  return markdown.replace(/```mermaid\s*\n[\s\S]*?```/g, "").trim();
+}
 
 const steps = [
   "استخراج من وثيقة",
