@@ -254,6 +254,7 @@ export default function ExtraAiPage() {
             if (content) {
               accumulated += content;
               setResult(accumulated);
+              setProgress(computeProgress(accumulated));
             }
           } catch {
             textBuffer = line + "\n" + textBuffer;
