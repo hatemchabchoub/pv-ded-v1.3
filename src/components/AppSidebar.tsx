@@ -44,7 +44,6 @@ const mainItems: NavItem[] = [
 ];
 
 const importItems: NavItem[] = [
-  { title: "استيراد PDF / OCR", url: "/import/pdf", icon: Upload, roles: ["admin", "officer", "department_supervisor"] },
   { title: "استيراد Excel", url: "/import/excel", icon: FileSpreadsheet, roles: ["admin", "officer", "department_supervisor"] },
 ];
 
