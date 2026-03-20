@@ -14,6 +14,8 @@ interface PdfPreviewDialogProps {
   fileName: string;
 }
 
+const PDFJS_VERSION = "3.11.174";
+
 const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDialogProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pdfDoc, setPdfDoc] = useState<pdfjsLib.PDFDocumentProxy | null>(null);
@@ -21,23 +23,35 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
   const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
   const [scale, setScale] = useState(1.5);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !pdfUrl) return;
+
     setLoading(true);
+    setError(null);
+
     const loadingTask = pdfjsLib.getDocument({
       url: pdfUrl,
-      cMapUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/",
+      cMapUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/cmaps/`,
       cMapPacked: true,
-      standardFontDataUrl: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/standard_fonts/",
+      standardFontDataUrl: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/standard_fonts/`,
+      disableFontFace: true,
+      useSystemFonts: false,
+      isOffscreenCanvasSupported: false,
     });
-    loadingTask.promise.then((doc) => {
-      setPdfDoc(doc);
-      setTotalPages(doc.numPages);
-      setCurrentPage(1);
-      setLoading(false);
-    }).catch(() => setLoading(false));
+
+    loadingTask.promise
+      .then((doc) => {
+        setPdfDoc(doc);
+        setTotalPages(doc.numPages);
+        setCurrentPage(1);
+      })
+      .catch((err) => {
+        console.error("PDF preview load error", err);
+        setError("تعذرت معاينة هذا الملف حالياً");
+      })
+      .finally(() => setLoading(false));
 
     return () => {
       loadingTask.destroy();
@@ -46,17 +60,45 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
 
   const renderPage = useCallback(async (pageNum: number) => {
     if (!pdfDoc || !canvasRef.current) return;
-    const page = await pdfDoc.getPage(pageNum);
-    const viewport = page.getViewport({ scale });
-    const canvas = canvasRef.current;
-    canvas.height = viewport.height;
-    canvas.width = viewport.width;
-    const ctx = canvas.getContext("2d")!;
-    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale });
+      const outputScale = window.devicePixelRatio || 1;
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) {
+        throw new Error("Canvas context unavailable");
+      }
+
+      canvas.width = Math.floor(viewport.width * outputScale);
+      canvas.height = Math.floor(viewport.height * outputScale);
+      canvas.style.width = `${Math.floor(viewport.width)}px`;
+      canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+      ctx.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+      ctx.clearRect(0, 0, viewport.width, viewport.height);
+
+      await page.render({
+        canvasContext: ctx,
+        viewport,
+      }).promise;
+    } catch (err) {
+      console.error("PDF preview render error", err);
+      setError("تعذر عرض الصفحة بشكل صحيح");
+    } finally {
+      setLoading(false);
+    }
   }, [pdfDoc, scale]);
 
   useEffect(() => {
-    if (pdfDoc) renderPage(currentPage);
+    if (pdfDoc) {
+      void renderPage(currentPage);
+    }
   }, [pdfDoc, currentPage, renderPage]);
 
   useEffect(() => {
@@ -64,6 +106,9 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
       setPdfDoc(null);
       setCurrentPage(1);
       setTotalPages(0);
+      setScale(1.5);
+      setError(null);
+      setLoading(false);
     }
   }, [open]);
 
@@ -77,39 +122,65 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
           </DialogTitle>
         </DialogHeader>
 
-        {/* Controls */}
         <div className="flex items-center justify-center gap-3 px-6 pb-2 flex-shrink-0">
-          <Button variant="outline" size="icon" className="h-7 w-7" disabled={currentPage <= 1}
-            onClick={() => setCurrentPage((p) => p - 1)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            disabled={currentPage <= 1 || loading}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
             <ChevronRight className="h-4 w-4" />
           </Button>
-          <span className="text-xs text-muted-foreground font-mono-data">
+          <span dir="ltr" className="text-xs text-muted-foreground font-mono-data">
             {currentPage} / {totalPages}
           </span>
-          <Button variant="outline" size="icon" className="h-7 w-7" disabled={currentPage >= totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}>
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            disabled={currentPage >= totalPages || loading}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="border-s border-border ps-3 flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              disabled={loading}
+              onClick={() => setScale((s) => Math.max(0.75, s - 0.25))}
+            >
               <ZoomOut className="h-3.5 w-3.5" />
             </Button>
-            <span className="text-xs text-muted-foreground w-10 text-center">{Math.round(scale * 100)}%</span>
-            <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setScale((s) => Math.min(3, s + 0.25))}>
+            <span dir="ltr" className="text-xs text-muted-foreground w-12 text-center">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              disabled={loading}
+              onClick={() => setScale((s) => Math.min(3, s + 0.25))}
+            >
               <ZoomIn className="h-3.5 w-3.5" />
             </Button>
           </div>
         </div>
 
-        {/* Canvas */}
-        <div ref={containerRef} className="flex-1 min-h-0 overflow-auto px-6 pb-6">
+        <div className="flex-1 min-h-0 overflow-auto px-6 pb-6">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-full text-sm text-destructive">
+              {error}
+            </div>
           ) : (
             <div className="flex justify-center">
-              <canvas ref={canvasRef} className="shadow-md rounded" />
+              <canvas ref={canvasRef} className="rounded border border-border bg-background shadow-md" />
             </div>
           )}
         </div>
@@ -119,3 +190,4 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
 };
 
 export default PdfPreviewDialog;
+
