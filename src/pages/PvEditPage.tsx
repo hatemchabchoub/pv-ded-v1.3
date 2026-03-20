@@ -270,7 +270,6 @@ const PvEditPage = () => {
         total_virtual_seizure: totalVirtual,
         total_precautionary_seizure: totalPrecautionary,
         notes: notes || null,
-        updated_by: user.id,
       }).eq("id", id);
       if (pvErr) throw pvErr;
 
