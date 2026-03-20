@@ -229,25 +229,12 @@ const PvAttachments = ({ pvId, canEdit }: PvAttachmentsProps) => {
       )}
 
       {/* PDF Preview Dialog */}
-      <Dialog open={!!previewUrl} onOpenChange={(open) => { if (!open) closePreview(); }}>
-        <DialogContent className="max-w-4xl h-[85vh] flex flex-col p-0">
-          <DialogHeader className="px-6 pt-6 pb-2">
-            <DialogTitle className="text-sm flex items-center gap-2">
-              <FileText className="h-4 w-4 text-destructive/70" />
-              {previewName}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 min-h-0 px-6 pb-6">
-            {previewUrl && (
-              <iframe
-                src={previewUrl}
-                className="w-full h-full rounded-md border border-border"
-                title={previewName}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      <PdfPreviewDialog
+        open={!!previewUrl}
+        onOpenChange={(open) => { if (!open) closePreview(); }}
+        pdfUrl={previewUrl}
+        fileName={previewName}
+      />
     </div>
   );
 };
