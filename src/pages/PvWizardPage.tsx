@@ -143,6 +143,104 @@ const PvWizardPage = () => {
     }
   }, [location.state]);
 
+  const applyExtractedData = useCallback((p: any, importId?: string) => {
+    if (p.pv_number) setPvNumber(p.pv_number);
+    if (p.pv_date) setPvDate(p.pv_date);
+    if (p.pv_type) setPvType(p.pv_type);
+    if (p.referral_type) setReferralType(p.referral_type);
+    if (p.notes) setNotes(p.notes);
+    if (p.offenders?.length) {
+      setOffenders(p.offenders.map((o: any) => ({
+        name_or_company: o.name_or_company || "", identifier: o.identifier || "",
+        person_type: o.person_type || "physical", city: o.city || "", address: o.address || "",
+      })));
+    }
+    if (p.violations?.length) {
+      setViolations(p.violations.map((v: any) => ({
+        violation_label: v.violation_label || "", violation_category: v.violation_category || "",
+        legal_basis: v.legal_basis || "", severity_level: v.severity_level || "",
+      })));
+    }
+    if (p.seizures?.length) {
+      setSeizures(p.seizures.map((s: any) => ({
+        goods_category: s.goods_category || "", goods_type: s.goods_type || "",
+        quantity: String(s.quantity || ""), unit: s.unit || "",
+        estimated_value: String(s.estimated_value || ""), seizure_type: s.seizure_type || "actual",
+      })));
+    }
+    if (importId) setSourceImportId(importId);
+  }, []);
+
+  const handleOcrUpload = useCallback(async (file: File) => {
+    if (!user) return;
+    setOcrFile(file);
+    setOcrStatus("uploading");
+    setOcrProgress(10);
+    setOcrError("");
+
+    try {
+      const storagePath = `ocr-imports/${user.id}/${Date.now()}_${file.name}`;
+      const { error: uploadErr } = await supabase.storage
+        .from("pv-attachments")
+        .upload(storagePath, file);
+      if (uploadErr) throw uploadErr;
+      setOcrProgress(30);
+
+      const { data: importRec, error: importErr } = await supabase
+        .from("document_imports")
+        .insert({
+          import_type: "pdf",
+          source_file_name: file.name,
+          storage_path: storagePath,
+          uploaded_by: user.id,
+          status: "pending",
+        })
+        .select("id")
+        .single();
+      if (importErr) throw importErr;
+
+      setOcrStatus("processing");
+      setOcrProgress(50);
+
+      const { data: extractResult, error: extractErr } = await supabase.functions.invoke("ocr-extract", {
+        body: { import_id: importRec.id },
+      });
+
+      if (extractErr) throw new Error(extractErr.message);
+      if (extractResult?.error) throw new Error(extractResult.error);
+
+      setOcrProgress(90);
+      setSourceImportId(importRec.id);
+      setOcrExtracted(extractResult.extracted);
+      setOcrConfidence(extractResult.overall_confidence || 50);
+      setOcrStatus("extracted");
+      setOcrProgress(100);
+
+      applyExtractedData(extractResult.extracted, importRec.id);
+      toast.success(`تم الاستخراج بنجاح — الثقة ${extractResult.overall_confidence}%`);
+    } catch (err: any) {
+      setOcrStatus("error");
+      setOcrError(err.message || "خطأ غير معروف");
+      toast.error(err.message || "خطأ في الاستخراج");
+    }
+  }, [user, applyExtractedData]);
+
+  const handleOcrFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const allowed = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      toast.error("صيغة غير مدعومة — يرجى تحميل PDF أو صورة");
+      return;
+    }
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error("الحد الأقصى لحجم الملف هو 20 ميغابايت");
+      return;
+    }
+    handleOcrUpload(file);
+    e.target.value = "";
+  }, [handleOcrUpload]);
+
   const { data: departments, refetch: refetchDepartments } = useQuery({
     queryKey: ["ref-departments"],
     queryFn: async () => {
