@@ -1,0 +1,1 @@
+ALTER TABLE public.pv ADD COLUMN IF NOT EXISTS ai_analysis_report text DEFAULT NULL;
