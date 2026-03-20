@@ -431,6 +431,12 @@ const PvDetailPage = () => {
           <PvAttachments pvId={id!} canEdit={canEdit} />
         </TabsContent>
 
+        {pv.ai_analysis_report && (
+          <TabsContent value="ai-report" className="mt-4">
+            <PvAiReportTab report={pv.ai_analysis_report} pvNumber={pv.pv_number} />
+          </TabsContent>
+        )}
+
         <TabsContent value="audit" className="mt-4">
           <div className="surface-elevated">
             {auditLogs?.length === 0 ? (
