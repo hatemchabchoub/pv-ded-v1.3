@@ -10,6 +10,7 @@ import {
   AlertTriangle,
   LogOut,
   Database,
+  DatabaseBackup,
   User,
   Sparkles,
 } from "lucide-react";
