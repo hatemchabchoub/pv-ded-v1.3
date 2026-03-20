@@ -59,8 +59,9 @@ export default function MermaidGraph({ code }: Props) {
           flowchart: { useMaxWidth: true, htmlLabels: true, curve: "basis" },
         });
 
+        const sanitized = sanitizeMermaidCode(code);
         const id = `mermaid-${Date.now()}`;
-        const { svg: renderedSvg } = await mermaid.render(id, code);
+        const { svg: renderedSvg } = await mermaid.render(id, sanitized);
         if (!cancelled) {
           setSvg(renderedSvg);
           setError("");
