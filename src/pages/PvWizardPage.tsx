@@ -19,6 +19,7 @@ import { AutocompleteWithAdd, AutocompleteOption } from "@/components/ui/autocom
 import { toast } from "sonner";
 
 const steps = [
+  "استخراج من وثيقة",
   "المعلومات العامة",
   "المخالفون",
   "المخالفات",
