@@ -80,6 +80,7 @@ export default function ExtraAiPage() {
   const [search, setSearch] = useState("");
   const [uploadedPdfs, setUploadedPdfs] = useState<UploadedPdf[]>([]);
   const [saving, setSaving] = useState(false);
+  const [progress, setProgress] = useState({ percent: 0, label: "" });
   const resultRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
