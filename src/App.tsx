@@ -115,6 +115,7 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/backup" element={<ProtectedRoute><AdminGuard><DatabaseBackupPage /></AdminGuard></ProtectedRoute>} />
+            <Route path="/extra-ai" element={<ProtectedRoute><AdminGuard><ExtraAiPage /></AdminGuard></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
