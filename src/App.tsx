@@ -113,6 +113,7 @@ const App = () => (
                 </RoleGuard>
               </ProtectedRoute>
             } />
+            <Route path="/backup" element={<ProtectedRoute><AdminGuard><DatabaseBackupPage /></AdminGuard></ProtectedRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
