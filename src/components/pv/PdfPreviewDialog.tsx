@@ -59,7 +59,7 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
   }, [open, pdfUrl]);
 
   const renderPage = useCallback(async (pageNum: number) => {
-    if (!pdfDoc || !canvasRef.current) return;
+    if (!pdfDoc) return;
 
     setLoading(true);
     setError(null);
@@ -69,8 +69,12 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
       const viewport = page.getViewport({ scale });
       const outputScale = window.devicePixelRatio || 1;
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext("2d");
 
+      if (!canvas) {
+        throw new Error("Canvas unavailable");
+      }
+
+      const ctx = canvas.getContext("2d");
       if (!ctx) {
         throw new Error("Canvas context unavailable");
       }
@@ -170,19 +174,24 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
         </div>
 
         <div className="flex-1 min-h-0 overflow-auto px-6 pb-6">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-full text-sm text-destructive">
-              {error}
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <canvas ref={canvasRef} className="rounded border border-border bg-background shadow-md" />
-            </div>
-          )}
+          <div className="relative flex min-h-full justify-center">
+            <canvas
+              ref={canvasRef}
+              className="rounded border border-border bg-background shadow-md"
+            />
+
+            {loading && (
+              <div className="absolute inset-0 flex items-center justify-center bg-background/70">
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+              </div>
+            )}
+
+            {error && !loading && (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-destructive bg-background/90">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -190,4 +199,3 @@ const PdfPreviewDialog = ({ open, onOpenChange, pdfUrl, fileName }: PdfPreviewDi
 };
 
 export default PdfPreviewDialog;
-
