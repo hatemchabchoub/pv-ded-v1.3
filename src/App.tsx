@@ -75,13 +75,8 @@ const App = () => (
               </ProtectedRoute>
             } />
 
-            <Route path="/import/pdf" element={
-              <ProtectedRoute>
-                <RoleGuard allowedRoles={["admin", "officer", "department_supervisor"]}>
-                  <PdfImportPage />
-                </RoleGuard>
-              </ProtectedRoute>
-            } />
+
+
             <Route path="/import/excel" element={
               <ProtectedRoute>
                 <RoleGuard allowedRoles={["admin", "officer", "department_supervisor"]}>
