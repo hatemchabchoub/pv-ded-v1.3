@@ -93,6 +93,15 @@ const PvDetailPage = () => {
     enabled: !!id,
   });
 
+  const { data: attachments } = useQuery({
+    queryKey: ["pv-attachments-count", id],
+    queryFn: async () => {
+      const { data } = await supabase.from("attachments").select("id").eq("pv_id", id!);
+      return data || [];
+    },
+    enabled: !!id,
+  });
+
   // Child PVs (sub-PVs / أضلع)
   const { data: childPvs } = useQuery({
     queryKey: ["pv-children", id],
@@ -229,9 +238,9 @@ const PvDetailPage = () => {
           {isParentPv && (
             <TabsTrigger value="recap">الفهرس التجميعي</TabsTrigger>
           )}
-          <TabsTrigger value="attachments">المرفقات</TabsTrigger>
+          <TabsTrigger value="attachments">المرفقات ({attachments?.length || 0})</TabsTrigger>
           {pv.ai_analysis_report && (
-            <TabsTrigger value="ai-report">التقرير الذكي</TabsTrigger>
+            <TabsTrigger value="ai-report">التقرير الذكي ✓</TabsTrigger>
           )}
           <TabsTrigger value="audit">السجل ({auditLogs?.length || 0})</TabsTrigger>
         </TabsList>
