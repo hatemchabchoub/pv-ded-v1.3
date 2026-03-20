@@ -1089,33 +1089,35 @@ const PvWizardPage = () => {
       )}
 
       {/* Navigation */}
-      <div className="flex items-center justify-between pt-4 border-t">
-        <Button
-          variant="outline" size="sm"
-          onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
-          disabled={currentStep === 0}
-        >
-          <ArrowRight className="h-4 w-4" />
-          السابق
-        </Button>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => savePv("draft")} disabled={saving}>
-            <Save className="h-4 w-4" />
-            {saving ? "جاري الحفظ..." : "حفظ كمسودة"}
+      {currentStep > 0 && (
+        <div className="flex items-center justify-between pt-4 border-t">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
+            disabled={currentStep === 0}
+          >
+            <ArrowRight className="h-4 w-4" />
+            السابق
           </Button>
-          {currentStep < steps.length - 1 ? (
-            <Button size="sm" onClick={() => setCurrentStep(currentStep + 1)}>
-              التالي
-              <ArrowLeft className="h-4 w-4" />
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => savePv("draft")} disabled={saving}>
+              <Save className="h-4 w-4" />
+              {saving ? "جاري الحفظ..." : "حفظ كمسودة"}
             </Button>
-          ) : (
-            <Button size="sm" onClick={() => savePv("under_review")} disabled={saving}>
-              <Check className="h-4 w-4" />
-              {saving ? "جاري الحفظ..." : "تصديق وإنشاء"}
-            </Button>
-          )}
+            {currentStep < steps.length - 1 ? (
+              <Button size="sm" onClick={() => setCurrentStep(currentStep + 1)}>
+                التالي
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => savePv("under_review")} disabled={saving}>
+                <Check className="h-4 w-4" />
+                {saving ? "جاري الحفظ..." : "تصديق وإنشاء"}
+              </Button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
