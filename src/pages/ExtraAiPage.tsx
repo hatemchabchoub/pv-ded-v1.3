@@ -47,7 +47,31 @@ function extractMermaidCode(markdown: string): string {
   return matches.join("\n\n");
 }
 
-export default function ExtraAiPage() {
+// Progress tracking: detect sections in streamed output
+const SECTION_MARKERS = [
+  { pattern: /القسم 1|بطاقة مختصرة|المرحلة الأولى/,  label: "بطاقة المحاضر", pct: 10 },
+  { pattern: /القسم 2|جدول الكيانات|المرحلة الثانية/, label: "استخراج الكيانات", pct: 22 },
+  { pattern: /القسم 3|التسلسل الزمني|المرحلة الثالثة/, label: "التسلسل الزمني", pct: 34 },
+  { pattern: /القسم 4|التحليل الوقائعي|المرحلة الرابعة/, label: "التحليل الوقائعي", pct: 46 },
+  { pattern: /القسم 5|التحليل المقارن|المرحلة الخامسة/, label: "التحليل المقارن", pct: 55 },
+  { pattern: /القسم 6|التناقضات|المرحلة السادسة/, label: "التناقضات", pct: 64 },
+  { pattern: /القسم 7|التقرير النهائي|المرحلة السابعة/, label: "التقرير النهائي", pct: 76 },
+  { pattern: /القسم 8|مخطط العلاقات|المرحلة الثامنة|```mermaid/, label: "مخطط العلاقات", pct: 88 },
+  { pattern: /القسم 9|التوصيات|المرحلة التاسعة/, label: "التوصيات", pct: 95 },
+];
+
+function computeProgress(text: string): { percent: number; label: string } {
+  if (!text) return { percent: 2, label: "بدء التحليل..." };
+  let best = { percent: 5, label: "قراءة المحاضر..." };
+  for (const marker of SECTION_MARKERS) {
+    if (marker.pattern.test(text)) {
+      best = { percent: marker.pct, label: marker.label };
+    }
+  }
+  return best;
+}
+
+
   const [pvList, setPvList] = useState<PvRow[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
