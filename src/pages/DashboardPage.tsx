@@ -356,7 +356,7 @@ const DashboardPage = () => {
       </div>
 
       {/* KPI Grid with trends */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
         <KpiCard className="animate-fade-in-up stagger-1" label="مجموع المحاضر" value={stats?.totalPv || 0} icon={FileText} variant="primary" trend={trendText(stats?.pvTrend ?? null)} />
         <KpiCard className="animate-fade-in-up stagger-2" label="محاضر رئيسية" value={stats?.parentPvCount || 0} icon={FileText} />
         <KpiCard className="animate-fade-in-up stagger-3" label="أضلع (فرعية)" value={stats?.subPvCount || 0} icon={FileText} />
@@ -536,7 +536,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <p className="text-[10px] text-primary font-semibold tracking-wide">المجموع الكلي (د.ت)</p>
-            <p className="text-xl font-bold font-mono-data text-primary">{fmt(stats?.totalSeizure || 0)}</p>
+            <p className="text-lg font-bold font-mono-data text-primary break-all leading-tight">{fmt(stats?.totalSeizure || 0)}</p>
           </div>
         </div>
       </div>
@@ -626,7 +626,7 @@ function MiniSeizureCard({ label, value, color, icon: Icon }: { label: string; v
       </div>
       <div>
         <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
-        <p className="text-lg font-bold font-mono-data">{fmt(value)}</p>
+        <p className="text-lg font-bold font-mono-data break-all leading-tight">{fmt(value)}</p>
       </div>
     </div>
   );
