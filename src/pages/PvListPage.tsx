@@ -132,7 +132,7 @@ const PvListPage = () => {
     setTypeFilter("all");
     setDeptFilter("all");
     setOfficerFilter("all");
-    setPage(0);
+    
   };
 
   const hasActiveFilters = search || statusFilter !== "all" || typeFilter !== "all" || deptFilter !== "all" || officerFilter !== "all";
