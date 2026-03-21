@@ -283,7 +283,12 @@ const PvListPage = () => {
   };
 
   // Drag-and-drop handlers for parent-child linking
-  const handleDragStart = (e: React.DragEvent, pvId: string, pvNumber: string) => {
+  const handleDragStart = (e: React.DragEvent, pvId: string, pvNumber: string, parentPvId: string | null) => {
+    // Prevent child PVs (ضلع) from being dragged
+    if (parentPvId) {
+      e.preventDefault();
+      return;
+    }
     dragSourceRef.current = { id: pvId, pvNumber };
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", pvId);
