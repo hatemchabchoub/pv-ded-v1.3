@@ -272,6 +272,65 @@ const PvListPage = () => {
     });
   };
 
+  // Drag-and-drop handlers for parent-child linking
+  const handleDragStart = (e: React.DragEvent, pvId: string, pvNumber: string) => {
+    dragSourceRef.current = { id: pvId, pvNumber };
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", pvId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, pvId: string) => {
+    e.preventDefault();
+    if (dragSourceRef.current && dragSourceRef.current.id !== pvId) {
+      setDragOverId(pvId);
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string, targetNumber: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+    if (!dragSourceRef.current || dragSourceRef.current.id === targetId) return;
+
+    setLinkPayload({
+      childId: dragSourceRef.current.id,
+      childNumber: dragSourceRef.current.pvNumber,
+      parentId: targetId,
+      parentNumber: targetNumber,
+    });
+    setShowLinkDialog(true);
+    dragSourceRef.current = null;
+  };
+
+  const handleDragEnd = () => {
+    dragSourceRef.current = null;
+    setDragOverId(null);
+  };
+
+  const confirmLink = async () => {
+    if (!linkPayload) return;
+    setLinking(true);
+    try {
+      const { error } = await supabase
+        .from("pv")
+        .update({ parent_pv_id: linkPayload.parentId, pv_type: "ضلع" })
+        .eq("id", linkPayload.childId);
+      if (error) throw error;
+      toast.success(`تم ربط المحضر ${linkPayload.childNumber} كضلع للمحضر ${linkPayload.parentNumber}`);
+      queryClient.invalidateQueries({ queryKey: ["pv-list"] });
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في الربط");
+    } finally {
+      setLinking(false);
+      setShowLinkDialog(false);
+      setLinkPayload(null);
+    }
+  };
+
   const toggleSelectAll = () => {
     if (!pvData?.data) return;
     const allOnPage = pvData.data.map((p: any) => p.id);
