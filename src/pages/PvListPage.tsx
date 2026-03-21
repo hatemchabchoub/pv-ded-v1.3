@@ -107,6 +107,12 @@ const PvListPage = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const queryClient = useQueryClient();
 
+  // Merge suggestion state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [mergeSuggestions, setMergeSuggestions] = useState<{ parentPv: any; children: any[] }[]>([]);
+  const [mergeAccepted, setMergeAccepted] = useState<Set<number>>(new Set());
+  const [merging, setMerging] = useState(false);
+
   // Drag-and-drop state for parent-child linking
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const dragSourceRef = useRef<{ id: string; pvNumber: string } | null>(null);
