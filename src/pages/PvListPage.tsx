@@ -275,6 +275,80 @@ const PvListPage = () => {
     return result;
   }, [pvData?.data, expandedGroups]);
 
+  // --- Merge suggestion logic ---
+  const analyzeMergeSuggestions = useCallback(() => {
+    if (!pvData?.data) return;
+    const all = pvData.data as any[];
+    // Group by base number (part before the last /digit)
+    const groups: Record<string, any[]> = {};
+    all.forEach(pv => {
+      const match = pv.pv_number.match(/^(.+?)\/(\d+)\s*$/);
+      if (match) {
+        const base = match[1].trim();
+        if (!groups[base]) groups[base] = [];
+        groups[base].push({ ...pv, _suffix: parseInt(match[2], 10) });
+      }
+    });
+
+    const suggestions: { parentPv: any; children: any[] }[] = [];
+    Object.entries(groups).forEach(([base, pvs]) => {
+      if (pvs.length < 2) return;
+      // Sort by suffix
+      pvs.sort((a, b) => a._suffix - b._suffix);
+      const potentialParent = pvs[0]; // lowest suffix = parent
+      // Only suggest if not already linked
+      const unlinkedChildren = pvs.slice(1).filter(p => p.parent_pv_id !== potentialParent.id);
+      if (unlinkedChildren.length === 0) return;
+      // Don't suggest if the potential parent is itself a child
+      if (potentialParent.parent_pv_id) return;
+      suggestions.push({ parentPv: potentialParent, children: unlinkedChildren });
+    });
+
+    if (suggestions.length === 0) {
+      toast.info("لا توجد اقتراحات دمج — جميع المحاضر مرتبطة بشكل صحيح");
+      return;
+    }
+
+    setMergeSuggestions(suggestions);
+    setMergeAccepted(new Set(suggestions.map((_, i) => i))); // all accepted by default
+    setShowMergeDialog(true);
+  }, [pvData?.data]);
+
+  const toggleMergeAccept = (idx: number) => {
+    setMergeAccepted(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  const applyMerges = async () => {
+    setMerging(true);
+    try {
+      let count = 0;
+      for (const idx of mergeAccepted) {
+        const suggestion = mergeSuggestions[idx];
+        if (!suggestion) continue;
+        for (const child of suggestion.children) {
+          const { error } = await supabase
+            .from("pv")
+            .update({ parent_pv_id: suggestion.parentPv.id, pv_type: "ضلع" })
+            .eq("id", child.id);
+          if (error) throw error;
+          count++;
+        }
+      }
+      toast.success(`تم دمج ${count} محضر بنجاح`);
+      queryClient.invalidateQueries({ queryKey: ["pv-list"] });
+      setShowMergeDialog(false);
+      setMergeSuggestions([]);
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في الدمج");
+    } finally {
+      setMerging(false);
+    }
+  };
+
   const toggleGroup = (parentId: string) => {
     setExpandedGroups(prev => {
       const next = new Set(prev);
