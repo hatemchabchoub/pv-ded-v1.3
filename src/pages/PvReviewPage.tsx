@@ -691,7 +691,7 @@ const PvReviewPage = () => {
         <div className="flex items-center gap-2">
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="default" disabled={saving} className="bg-green-600 hover:bg-green-700">
+              <Button variant="default" disabled={saving} className="bg-success hover:bg-success/90 text-success-foreground">
                 <CheckCircle className="h-4 w-4" />
                 حفظ وإرسال للمراجعة
               </Button>
