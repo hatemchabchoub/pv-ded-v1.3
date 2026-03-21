@@ -22,8 +22,11 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from "@/components/ui/dialog";
+import {
   FilePlus, Search, Download, Eye, Pencil, Trash2, ChevronDown, ChevronUp, Printer,
-  ArrowUpDown, ArrowUp, ArrowDown, Filter, X,
+  ArrowUpDown, ArrowUp, ArrowDown, Filter, X, GitMerge, Check,
 } from "lucide-react";
 import { exportPvToExcel } from "@/lib/excel-export";
 
@@ -103,6 +106,12 @@ const PvListPage = () => {
   const [sortCol, setSortCol] = useState<SortCol>("pv_number");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const queryClient = useQueryClient();
+
+  // Merge suggestion state
+  const [showMergeDialog, setShowMergeDialog] = useState(false);
+  const [mergeSuggestions, setMergeSuggestions] = useState<{ parentPv: any; children: any[] }[]>([]);
+  const [mergeAccepted, setMergeAccepted] = useState<Set<number>>(new Set());
+  const [merging, setMerging] = useState(false);
 
   // Drag-and-drop state for parent-child linking
   const [dragOverId, setDragOverId] = useState<string | null>(null);
@@ -265,6 +274,80 @@ const PvListPage = () => {
     orphanChildren.forEach(c => result.push({ pv: c, isChild: true, childCount: 0, isExpanded: true }));
     return result;
   }, [pvData?.data, expandedGroups]);
+
+  // --- Merge suggestion logic ---
+  const analyzeMergeSuggestions = useCallback(() => {
+    if (!pvData?.data) return;
+    const all = pvData.data as any[];
+    // Group by base number (part before the last /digit)
+    const groups: Record<string, any[]> = {};
+    all.forEach(pv => {
+      const match = pv.pv_number.match(/^(.+?)\/(\d+)\s*$/);
+      if (match) {
+        const base = match[1].trim();
+        if (!groups[base]) groups[base] = [];
+        groups[base].push({ ...pv, _suffix: parseInt(match[2], 10) });
+      }
+    });
+
+    const suggestions: { parentPv: any; children: any[] }[] = [];
+    Object.entries(groups).forEach(([base, pvs]) => {
+      if (pvs.length < 2) return;
+      // Sort by suffix
+      pvs.sort((a, b) => a._suffix - b._suffix);
+      const potentialParent = pvs[0]; // lowest suffix = parent
+      // Only suggest if not already linked
+      const unlinkedChildren = pvs.slice(1).filter(p => p.parent_pv_id !== potentialParent.id);
+      if (unlinkedChildren.length === 0) return;
+      // Don't suggest if the potential parent is itself a child
+      if (potentialParent.parent_pv_id) return;
+      suggestions.push({ parentPv: potentialParent, children: unlinkedChildren });
+    });
+
+    if (suggestions.length === 0) {
+      toast.info("لا توجد اقتراحات دمج — جميع المحاضر مرتبطة بشكل صحيح");
+      return;
+    }
+
+    setMergeSuggestions(suggestions);
+    setMergeAccepted(new Set(suggestions.map((_, i) => i))); // all accepted by default
+    setShowMergeDialog(true);
+  }, [pvData?.data]);
+
+  const toggleMergeAccept = (idx: number) => {
+    setMergeAccepted(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
+
+  const applyMerges = async () => {
+    setMerging(true);
+    try {
+      let count = 0;
+      for (const idx of mergeAccepted) {
+        const suggestion = mergeSuggestions[idx];
+        if (!suggestion) continue;
+        for (const child of suggestion.children) {
+          const { error } = await supabase
+            .from("pv")
+            .update({ parent_pv_id: suggestion.parentPv.id, pv_type: "ضلع" })
+            .eq("id", child.id);
+          if (error) throw error;
+          count++;
+        }
+      }
+      toast.success(`تم دمج ${count} محضر بنجاح`);
+      queryClient.invalidateQueries({ queryKey: ["pv-list"] });
+      setShowMergeDialog(false);
+      setMergeSuggestions([]);
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في الدمج");
+    } finally {
+      setMerging(false);
+    }
+  };
 
   const toggleGroup = (parentId: string) => {
     setExpandedGroups(prev => {
@@ -503,6 +586,10 @@ const PvListPage = () => {
             <Download className="h-4 w-4" />
             {exporting ? "جاري التصدير..." : "تصدير"}
           </Button>
+          <Button variant="outline" size="sm" onClick={analyzeMergeSuggestions}>
+            <GitMerge className="h-4 w-4" />
+            اقتراح دمج
+          </Button>
           <Button variant="outline" size="sm" onClick={() => window.print()}>
             <Printer className="h-4 w-4" />
             طباعة
@@ -708,6 +795,63 @@ const PvListPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Merge suggestions dialog */}
+      <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitMerge className="h-5 w-5 text-primary" />
+              اقتراحات الدمج
+            </DialogTitle>
+            <DialogDescription>
+              تم تحليل المحاضر واكتشاف {mergeSuggestions.length} مجموعة يمكن دمجها. اختر الاقتراحات التي تريد تطبيقها.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {mergeSuggestions.map((suggestion, idx) => (
+              <div
+                key={idx}
+                className={`border rounded-lg p-3 transition-colors cursor-pointer ${mergeAccepted.has(idx) ? "border-primary bg-primary/5" : "border-muted opacity-60"}`}
+                onClick={() => toggleMergeAccept(idx)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={mergeAccepted.has(idx)} onCheckedChange={() => toggleMergeAccept(idx)} />
+                    <span className="text-sm font-semibold">المجموعة {idx + 1}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{suggestion.children.length} محضر سيتم ربطه</span>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">أب</span>
+                    <span className="font-mono">{suggestion.parentPv.pv_number}</span>
+                    <span className="text-muted-foreground text-xs">({suggestion.parentPv.pv_date})</span>
+                  </div>
+                  {suggestion.children.map((child: any) => (
+                    <div key={child.id} className="flex items-center gap-2 ps-4">
+                      <span className="text-muted-foreground">↳</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent-foreground">ضلع</span>
+                      <span className="font-mono">{child.pv_number}</span>
+                      <span className="text-muted-foreground text-xs">({child.pv_date})</span>
+                      {child.parent_pv_id && (
+                        <span className="text-xs text-destructive">(مرتبط حالياً بمحضر آخر — سيتم تحديثه)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowMergeDialog(false)} disabled={merging}>إلغاء</Button>
+            <Button onClick={applyMerges} disabled={merging || mergeAccepted.size === 0}>
+              <Check className="h-4 w-4" />
+              {merging ? "جاري الدمج..." : `تطبيق (${mergeAccepted.size})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
