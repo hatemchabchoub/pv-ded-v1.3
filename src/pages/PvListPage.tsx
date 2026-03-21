@@ -446,7 +446,7 @@ const PvListPage = () => {
             </SelectContent>
           </Select>
 
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(0); }}>
+          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); }}>
             <SelectTrigger className="w-36">
               <SelectValue placeholder="الحالة" />
             </SelectTrigger>
