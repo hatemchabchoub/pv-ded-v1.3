@@ -536,7 +536,7 @@ const DashboardPage = () => {
           </div>
           <div>
             <p className="text-[10px] text-primary font-semibold tracking-wide">المجموع الكلي (د.ت)</p>
-            <p className="text-xl font-bold font-mono-data text-primary">{fmt(stats?.totalSeizure || 0)}</p>
+            <p className="text-lg font-bold font-mono-data text-primary break-all leading-tight">{fmt(stats?.totalSeizure || 0)}</p>
           </div>
         </div>
       </div>
