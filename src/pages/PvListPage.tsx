@@ -405,7 +405,7 @@ const PvListPage = () => {
             <Input
               placeholder="بحث بعدد المحضر أو المرجع..."
               value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+              onChange={(e) => { setSearch(e.target.value); }}
               className="ps-9"
             />
           </div>
