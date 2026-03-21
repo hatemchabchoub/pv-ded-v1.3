@@ -413,9 +413,10 @@ const PvReviewPage = () => {
           <div className="space-y-2">
             <Label>الضابط</Label>
             <Select value={officerId} onValueChange={setOfficerId}>
-              <SelectTrigger><SelectValue placeholder="اختيار" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={departmentId ? "اختيار ضابط" : "اختر القسم أولا"} /></SelectTrigger>
               <SelectContent>
-                {officers?.map(o => <SelectItem key={o.id} value={o.id}>{o.full_name}</SelectItem>)}
+                {officers?.map(o => <SelectItem key={o.id} value={o.id}>{o.full_name} — {o.rank_label}</SelectItem>)}
+                {officers?.length === 0 && <div className="p-2 text-xs text-center text-muted-foreground">لا يوجد ضباط في هذا القسم</div>}
               </SelectContent>
             </Select>
           </div>
