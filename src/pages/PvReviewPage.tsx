@@ -98,13 +98,16 @@ const PvReviewPage = () => {
       return data || [];
     },
   });
-  const { data: officers } = useQuery({
+  const { data: allOfficers } = useQuery({
     queryKey: ["ref-officers-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("officers").select("id, full_name, badge_number, rank_label").eq("active", true).order("full_name");
+      const { data } = await supabase.from("officers").select("id, full_name, badge_number, rank_label, department_id").eq("active", true).order("full_name");
       return data || [];
     },
   });
+  const officers = departmentId
+    ? allOfficers?.filter(o => o.department_id === departmentId)
+    : allOfficers;
   const { data: referralSources } = useQuery({
     queryKey: ["ref-referral-sources"],
     queryFn: async () => {
@@ -400,7 +403,7 @@ const PvReviewPage = () => {
           </div>
           <div className="space-y-2">
             <Label>القسم</Label>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
+            <Select value={departmentId} onValueChange={(v) => { setDepartmentId(v); setOfficerId(""); }}>
               <SelectTrigger><SelectValue placeholder="اختيار" /></SelectTrigger>
               <SelectContent>
                 {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name_ar || d.name_fr}</SelectItem>)}
@@ -410,9 +413,10 @@ const PvReviewPage = () => {
           <div className="space-y-2">
             <Label>الضابط</Label>
             <Select value={officerId} onValueChange={setOfficerId}>
-              <SelectTrigger><SelectValue placeholder="اختيار" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={departmentId ? "اختيار ضابط" : "اختر القسم أولا"} /></SelectTrigger>
               <SelectContent>
-                {officers?.map(o => <SelectItem key={o.id} value={o.id}>{o.full_name}</SelectItem>)}
+                {officers?.map(o => <SelectItem key={o.id} value={o.id}>{o.full_name} — {o.rank_label}</SelectItem>)}
+                {officers?.length === 0 && <div className="p-2 text-xs text-center text-muted-foreground">لا يوجد ضباط في هذا القسم</div>}
               </SelectContent>
             </Select>
           </div>
