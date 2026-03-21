@@ -31,7 +31,7 @@ type CaseStatus = "draft" | "under_review" | "validated" | "archived";
 type SortDir = "asc" | "desc";
 type SortCol = "pv_number" | "pv_date" | "total_actual_seizure" | "total_virtual_seizure" | "total_precautionary_seizure" | "total_seizure" | "pv_type" | "case_status";
 
-const PAGE_SIZE = 50;
+// No pagination - fetch all rows
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("fr-TN", { minimumFractionDigits: 3 }).format(value);
