@@ -294,8 +294,13 @@ const PvListPage = () => {
     e.dataTransfer.setData("text/plain", pvId);
   };
 
-  const handleDragOver = (e: React.DragEvent, pvId: string) => {
+  const handleDragOver = (e: React.DragEvent, pvId: string, parentPvId: string | null) => {
     e.preventDefault();
+    // Prevent dropping on a child PV (ضلع can't be a parent)
+    if (parentPvId) {
+      e.dataTransfer.dropEffect = "none";
+      return;
+    }
     if (dragSourceRef.current && dragSourceRef.current.id !== pvId) {
       setDragOverId(pvId);
       e.dataTransfer.dropEffect = "move";
@@ -306,10 +311,32 @@ const PvListPage = () => {
     setDragOverId(null);
   };
 
-  const handleDrop = (e: React.DragEvent, targetId: string, targetNumber: string) => {
+  // Extract numeric suffix from pv_number (e.g. "123/2" -> 2)
+  const getPvSuffix = (pvNumber: string): number | null => {
+    const match = pvNumber.match(/\/(\d+)\s*$/);
+    return match ? parseInt(match[1], 10) : null;
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string, targetNumber: string, targetParentPvId: string | null) => {
     e.preventDefault();
     setDragOverId(null);
     if (!dragSourceRef.current || dragSourceRef.current.id === targetId) return;
+
+    // Rule 1: A child PV (ضلع) cannot become a parent
+    if (targetParentPvId) {
+      toast.error("لا يمكن لمحضر من نوع ضلع أن يكون محضرًا أبًا");
+      dragSourceRef.current = null;
+      return;
+    }
+
+    // Rule 2: A PV with a higher suffix cannot be parent of a PV with a lower suffix
+    const sourceSuffix = getPvSuffix(dragSourceRef.current.pvNumber);
+    const targetSuffix = getPvSuffix(targetNumber);
+    if (sourceSuffix !== null && targetSuffix !== null && targetSuffix > sourceSuffix) {
+      toast.error(`لا يمكن للمحضر ${targetNumber} أن يكون أبًا للمحضر ${dragSourceRef.current.pvNumber} — الترقيم غير متوافق`);
+      dragSourceRef.current = null;
+      return;
+    }
 
     setLinkPayload({
       childId: dragSourceRef.current.id,
@@ -592,9 +619,9 @@ const PvListPage = () => {
                     className={`font-mono text-sm select-none transition-colors ${pv.parent_pv_id ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${dragOverId === pv.id ? "bg-primary/20 ring-2 ring-primary/40 ring-inset" : ""}`}
                     draggable={!pv.parent_pv_id}
                     onDragStart={(e) => handleDragStart(e, pv.id, pv.pv_number, pv.parent_pv_id)}
-                    onDragOver={(e) => handleDragOver(e, pv.id)}
+                    onDragOver={(e) => handleDragOver(e, pv.id, pv.parent_pv_id)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, pv.id, pv.pv_number)}
+                    onDrop={(e) => handleDrop(e, pv.id, pv.pv_number, pv.parent_pv_id)}
                     onDragEnd={handleDragEnd}
                     title="اسحب إلى محضر آخر لربطه كضلع"
                   >
