@@ -240,7 +240,7 @@ const PvListPage = () => {
     },
   });
 
-  const totalPages = Math.ceil((pvData?.count || 0) / PAGE_SIZE);
+  
 
   // Group PVs: parent PVs first, children under them
   const groupedPvs = useMemo(() => {
