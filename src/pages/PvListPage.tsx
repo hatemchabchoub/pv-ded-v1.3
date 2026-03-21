@@ -94,7 +94,7 @@ const PvListPage = () => {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [officerFilter, setOfficerFilter] = useState<string>("all");
-  const [page, setPage] = useState(0);
+  
   const [exporting, setExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
