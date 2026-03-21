@@ -626,7 +626,7 @@ function MiniSeizureCard({ label, value, color, icon: Icon }: { label: string; v
       </div>
       <div>
         <p className="text-[10px] text-muted-foreground font-medium">{label}</p>
-        <p className="text-lg font-bold font-mono-data break-all leading-tight">{fmt(value)}</p>
+        <p className="text-base sm:text-lg font-bold font-mono-data whitespace-nowrap leading-tight">{fmt(value)}</p>
       </div>
     </div>
   );
