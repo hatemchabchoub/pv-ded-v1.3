@@ -14,6 +14,7 @@ import PvDetailPage from "@/pages/PvDetailPage";
 import PvWizardPage from "@/pages/PvWizardPage";
 import PvEditPage from "@/pages/PvEditPage";
 import ExcelImportPage from "@/pages/ExcelImportPage";
+import PdfBatchImportPage from "@/pages/PdfBatchImportPage";
 
 import ReportsPage from "@/pages/ReportsPage";
 import AnomaliesPage from "@/pages/AnomaliesPage";
