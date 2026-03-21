@@ -182,6 +182,8 @@ const PvReviewPage = () => {
     setOfficerId(currentPv.officer_id || "");
     setReferralType(currentPv.referral_type || "");
     setReferralSourceId(currentPv.referral_source_id || "");
+    const matchedSource = referralSources?.find(r => r.id === currentPv.referral_source_id);
+    setReferralSourceText(matchedSource ? (matchedSource.label_ar || matchedSource.label_fr) : "");
     setPvType(currentPv.pv_type || "");
     setParentPvId(currentPv.parent_pv_id || "");
     setNotes(currentPv.notes || "");
