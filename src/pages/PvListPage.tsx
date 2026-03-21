@@ -653,6 +653,27 @@ const PvListPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Link parent-child confirmation dialog */}
+      <AlertDialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ربط محضر كضلع</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span>هل تريد ربط المحضر:</span>
+              <span className="block font-mono font-semibold text-foreground">{linkPayload?.childNumber}</span>
+              <span>كضلع للمحضر الأب:</span>
+              <span className="block font-mono font-semibold text-foreground">{linkPayload?.parentNumber}</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={linking}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLink} disabled={linking}>
+              {linking ? "جاري الربط..." : "تأكيد الربط"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
