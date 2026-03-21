@@ -619,9 +619,9 @@ const PvListPage = () => {
                     className={`font-mono text-sm select-none transition-colors ${pv.parent_pv_id ? "cursor-default" : "cursor-grab active:cursor-grabbing"} ${dragOverId === pv.id ? "bg-primary/20 ring-2 ring-primary/40 ring-inset" : ""}`}
                     draggable={!pv.parent_pv_id}
                     onDragStart={(e) => handleDragStart(e, pv.id, pv.pv_number, pv.parent_pv_id)}
-                    onDragOver={(e) => handleDragOver(e, pv.id)}
+                    onDragOver={(e) => handleDragOver(e, pv.id, pv.parent_pv_id)}
                     onDragLeave={handleDragLeave}
-                    onDrop={(e) => handleDrop(e, pv.id, pv.pv_number)}
+                    onDrop={(e) => handleDrop(e, pv.id, pv.pv_number, pv.parent_pv_id)}
                     onDragEnd={handleDragEnd}
                     title="اسحب إلى محضر آخر لربطه كضلع"
                   >
