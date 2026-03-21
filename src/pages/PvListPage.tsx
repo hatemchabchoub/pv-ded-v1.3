@@ -123,7 +123,7 @@ const PvListPage = () => {
       setSortCol(col);
       setSortDir("asc");
     }
-    setPage(0);
+    
   };
 
   const resetFilters = () => {
