@@ -187,7 +187,7 @@ const PvReviewPage = () => {
     setPvType(currentPv.pv_type || "");
     setParentPvId(currentPv.parent_pv_id || "");
     setNotes(currentPv.notes || "");
-  }, [currentPv]);
+  }, [currentPv, referralSources]);
 
   useEffect(() => { populateForm(); }, [populateForm]);
 
