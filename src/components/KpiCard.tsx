@@ -39,24 +39,26 @@ export function KpiCard({ label, value, icon: Icon, trend, variant = "default", 
   return (
     <div
       className={cn(
-        "surface-glass p-5 flex items-start justify-between transition-all duration-300 hover:shadow-lg group cursor-default glow-ring",
+        "surface-glass p-4 flex flex-col gap-3 transition-all duration-300 hover:shadow-lg group cursor-default glow-ring",
         v.border, v.glow, className
       )}
     >
-      <div className="space-y-1.5 min-w-0 flex-1">
+      <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground font-medium tracking-wide">{label}</p>
-        <p className="text-[clamp(0.85rem,2.5vw,1.25rem)] font-bold font-mono-data tracking-tight whitespace-nowrap leading-tight">{value}</p>
+        <div className={cn(
+          "p-2 rounded-lg transition-all duration-500 group-hover:scale-110 group-hover:-rotate-6 animate-fade-in",
+          v.icon
+        )}>
+          <Icon className="h-4 w-4" />
+        </div>
+      </div>
+      <div>
+        <p className="text-xl font-bold font-mono-data tracking-tight leading-tight">{value}</p>
         {trend && (
-          <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+          <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
             {trend}
           </p>
         )}
-      </div>
-      <div className={cn(
-        "p-2.5 rounded-xl transition-all duration-300 group-hover:scale-110 group-hover:rotate-3",
-        v.icon
-      )}>
-        <Icon className="h-5 w-5" />
       </div>
     </div>
   );
