@@ -43,9 +43,9 @@ export function KpiCard({ label, value, icon: Icon, trend, variant = "default", 
         v.border, v.glow, className
       )}
     >
-      <div className="space-y-1.5">
+      <div className="space-y-1.5 min-w-0 flex-1">
         <p className="text-[11px] text-muted-foreground font-medium tracking-wide">{label}</p>
-        <p className="text-2xl font-bold font-mono-data tracking-tight">{value}</p>
+        <p className="text-lg xl:text-xl font-bold font-mono-data tracking-tight break-all leading-tight">{value}</p>
         {trend && (
           <p className="text-[10px] text-muted-foreground flex items-center gap-1">
             {trend}
