@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -103,6 +103,13 @@ const PvListPage = () => {
   const [sortCol, setSortCol] = useState<SortCol>("pv_number");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const queryClient = useQueryClient();
+
+  // Drag-and-drop state for parent-child linking
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragSourceRef = useRef<{ id: string; pvNumber: string } | null>(null);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkPayload, setLinkPayload] = useState<{ childId: string; childNumber: string; parentId: string; parentNumber: string } | null>(null);
+  const [linking, setLinking] = useState(false);
 
   const isNationalSupervisor = roles.includes("national_supervisor");
   const isDeptSupervisor = roles.includes("department_supervisor");
@@ -263,6 +270,65 @@ const PvListPage = () => {
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
+  };
+
+  // Drag-and-drop handlers for parent-child linking
+  const handleDragStart = (e: React.DragEvent, pvId: string, pvNumber: string) => {
+    dragSourceRef.current = { id: pvId, pvNumber };
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", pvId);
+  };
+
+  const handleDragOver = (e: React.DragEvent, pvId: string) => {
+    e.preventDefault();
+    if (dragSourceRef.current && dragSourceRef.current.id !== pvId) {
+      setDragOverId(pvId);
+      e.dataTransfer.dropEffect = "move";
+    }
+  };
+
+  const handleDragLeave = () => {
+    setDragOverId(null);
+  };
+
+  const handleDrop = (e: React.DragEvent, targetId: string, targetNumber: string) => {
+    e.preventDefault();
+    setDragOverId(null);
+    if (!dragSourceRef.current || dragSourceRef.current.id === targetId) return;
+
+    setLinkPayload({
+      childId: dragSourceRef.current.id,
+      childNumber: dragSourceRef.current.pvNumber,
+      parentId: targetId,
+      parentNumber: targetNumber,
+    });
+    setShowLinkDialog(true);
+    dragSourceRef.current = null;
+  };
+
+  const handleDragEnd = () => {
+    dragSourceRef.current = null;
+    setDragOverId(null);
+  };
+
+  const confirmLink = async () => {
+    if (!linkPayload) return;
+    setLinking(true);
+    try {
+      const { error } = await supabase
+        .from("pv")
+        .update({ parent_pv_id: linkPayload.parentId, pv_type: "ضلع" })
+        .eq("id", linkPayload.childId);
+      if (error) throw error;
+      toast.success(`تم ربط المحضر ${linkPayload.childNumber} كضلع للمحضر ${linkPayload.parentNumber}`);
+      queryClient.invalidateQueries({ queryKey: ["pv-list"] });
+    } catch (err: any) {
+      toast.error(err.message || "خطأ في الربط");
+    } finally {
+      setLinking(false);
+      setShowLinkDialog(false);
+      setLinkPayload(null);
+    }
   };
 
   const toggleSelectAll = () => {
@@ -507,7 +573,18 @@ const PvListPage = () => {
                       )}
                     </div>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{pv.pv_number}</TableCell>
+                  <TableCell
+                    className={`font-mono text-sm cursor-grab active:cursor-grabbing select-none transition-colors ${dragOverId === pv.id ? "bg-primary/20 ring-2 ring-primary/40 ring-inset" : ""}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, pv.id, pv.pv_number)}
+                    onDragOver={(e) => handleDragOver(e, pv.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, pv.id, pv.pv_number)}
+                    onDragEnd={handleDragEnd}
+                    title="اسحب إلى محضر آخر لربطه كضلع"
+                  >
+                    {pv.pv_number}
+                  </TableCell>
                   <TableCell className="text-sm">{pv.pv_date}</TableCell>
                   <TableCell className="text-xs">
                     {isChild && <span className="text-muted-foreground me-1">↳</span>}
@@ -572,6 +649,27 @@ const PvListPage = () => {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {deleting ? "جاري الحذف..." : "حذف"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Link parent-child confirmation dialog */}
+      <AlertDialog open={showLinkDialog} onOpenChange={setShowLinkDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>ربط محضر كضلع</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span>هل تريد ربط المحضر:</span>
+              <span className="block font-mono font-semibold text-foreground">{linkPayload?.childNumber}</span>
+              <span>كضلع للمحضر الأب:</span>
+              <span className="block font-mono font-semibold text-foreground">{linkPayload?.parentNumber}</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={linking}>إلغاء</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmLink} disabled={linking}>
+              {linking ? "جاري الربط..." : "تأكيد الربط"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
