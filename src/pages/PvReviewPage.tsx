@@ -403,7 +403,7 @@ const PvReviewPage = () => {
           </div>
           <div className="space-y-2">
             <Label>القسم</Label>
-            <Select value={departmentId} onValueChange={setDepartmentId}>
+            <Select value={departmentId} onValueChange={(v) => { setDepartmentId(v); setOfficerId(""); }}>
               <SelectTrigger><SelectValue placeholder="اختيار" /></SelectTrigger>
               <SelectContent>
                 {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name_ar || d.name_fr}</SelectItem>)}
