@@ -175,39 +175,49 @@ const PvListPage = () => {
   }, [officers, deptFilter]);
 
   const { data: pvData, isLoading } = useQuery({
-    queryKey: ["pv-list", page, statusFilter, typeFilter, deptFilter, officerFilter, search, sortCol, sortDir, user?.id, profile?.department_id, roles],
+    queryKey: ["pv-list", statusFilter, typeFilter, deptFilter, officerFilter, search, sortCol, sortDir, user?.id, profile?.department_id, roles],
     queryFn: async () => {
-      let query = supabase
-        .from("pv")
-        .select(`
-          id, internal_reference, pv_number, pv_date, case_status, pv_type, parent_pv_id,
-          total_actual_seizure, total_virtual_seizure, total_precautionary_seizure, total_seizure,
-          customs_violation, currency_violation, public_law_violation, seizure_renewal,
-          source_import_type, notes, created_at, department_id, officer_id,
-          departments (id, name_fr, name_ar, code),
-          officers (id, full_name, badge_number, rank_label)
-        `, { count: "exact" })
-        .order(sortCol, { ascending: sortDir === "asc" })
-        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+      const allRows: any[] = [];
+      let from = 0;
+      const chunkSize = 1000;
 
-      // Role-based visibility filtering
-      if (isAdmin || isNationalSupervisor) {
-        // see all
-      } else if (isDeptSupervisor || isViewer) {
-        if (profile?.department_id) query = query.eq("department_id", profile.department_id);
-      } else if (isOfficer) {
-        if (user?.id) query = query.eq("created_by", user.id);
+      while (true) {
+        let query = supabase
+          .from("pv")
+          .select(`
+            id, internal_reference, pv_number, pv_date, case_status, pv_type, parent_pv_id,
+            total_actual_seizure, total_virtual_seizure, total_precautionary_seizure, total_seizure,
+            customs_violation, currency_violation, public_law_violation, seizure_renewal,
+            source_import_type, notes, created_at, department_id, officer_id,
+            departments (id, name_fr, name_ar, code),
+            officers (id, full_name, badge_number, rank_label)
+          `)
+          .order(sortCol, { ascending: sortDir === "asc" })
+          .range(from, from + chunkSize - 1);
+
+        if (isAdmin || isNationalSupervisor) {
+          // see all
+        } else if (isDeptSupervisor || isViewer) {
+          if (profile?.department_id) query = query.eq("department_id", profile.department_id);
+        } else if (isOfficer) {
+          if (user?.id) query = query.eq("created_by", user.id);
+        }
+
+        if (statusFilter !== "all") query = query.eq("case_status", statusFilter);
+        if (typeFilter !== "all") query = query.eq("pv_type", typeFilter);
+        if (deptFilter !== "all") query = query.eq("department_id", deptFilter);
+        if (officerFilter !== "all") query = query.eq("officer_id", officerFilter);
+        if (search) query = query.or(`pv_number.ilike.%${search}%,internal_reference.ilike.%${search}%`);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        allRows.push(...data);
+        if (data.length < chunkSize) break;
+        from += chunkSize;
       }
 
-      if (statusFilter !== "all") query = query.eq("case_status", statusFilter);
-      if (typeFilter !== "all") query = query.eq("pv_type", typeFilter);
-      if (deptFilter !== "all") query = query.eq("department_id", deptFilter);
-      if (officerFilter !== "all") query = query.eq("officer_id", officerFilter);
-      if (search) query = query.or(`pv_number.ilike.%${search}%,internal_reference.ilike.%${search}%`);
-
-      const { data, error, count } = await query;
-      if (error) throw error;
-      return { data: data || [], count: count || 0 };
+      return { data: allRows, count: allRows.length };
     },
   });
 
