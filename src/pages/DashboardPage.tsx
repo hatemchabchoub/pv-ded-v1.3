@@ -356,7 +356,7 @@ const DashboardPage = () => {
       </div>
 
       {/* KPI Grid with trends */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6 gap-4">
         <KpiCard className="animate-fade-in-up stagger-1" label="مجموع المحاضر" value={stats?.totalPv || 0} icon={FileText} variant="primary" trend={trendText(stats?.pvTrend ?? null)} />
         <KpiCard className="animate-fade-in-up stagger-2" label="محاضر رئيسية" value={stats?.parentPvCount || 0} icon={FileText} />
         <KpiCard className="animate-fade-in-up stagger-3" label="أضلع (فرعية)" value={stats?.subPvCount || 0} icon={FileText} />
