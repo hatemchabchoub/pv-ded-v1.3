@@ -66,6 +66,7 @@ const PvReviewPage = () => {
   const [officerId, setOfficerId] = useState("");
   const [referralType, setReferralType] = useState("");
   const [referralSourceId, setReferralSourceId] = useState("");
+  const [referralSourceText, setReferralSourceText] = useState("");
   const [pvType, setPvType] = useState("");
   const [parentPvId, setParentPvId] = useState("");
   const [notes, setNotes] = useState("");
