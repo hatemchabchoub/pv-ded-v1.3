@@ -410,7 +410,7 @@ const PvListPage = () => {
             />
           </div>
 
-          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); setPage(0); }}>
+          <Select value={typeFilter} onValueChange={(v) => { setTypeFilter(v); }}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="النوع" />
             </SelectTrigger>
