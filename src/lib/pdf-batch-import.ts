@@ -224,12 +224,30 @@ export async function importExtractedPvs(
         );
       }
 
-      // Link document_import to pv
+      // Link document_import to pv and attach source PDF
       if (entry.importId) {
+        const { data: importRecord } = await supabase
+          .from("document_imports")
+          .select("storage_path, source_file_name")
+          .eq("id", entry.importId)
+          .single();
+
         await supabase
           .from("document_imports")
           .update({ pv_id: pv.id, status: "imported" })
           .eq("id", entry.importId);
+
+        // Attach the source PDF automatically to the PV
+        if (importRecord?.storage_path) {
+          await supabase.from("attachments").insert({
+            pv_id: pv.id,
+            file_name: importRecord.source_file_name || entry.file.name,
+            storage_path: importRecord.storage_path,
+            file_size: entry.file.size,
+            mime_type: "application/pdf",
+            uploaded_by: userId,
+          });
+        }
       }
 
       results.push({ fileId: entry.id, status: "success", pvId: pv.id });
