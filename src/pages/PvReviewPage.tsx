@@ -437,12 +437,42 @@ const PvReviewPage = () => {
           </div>
           <div className="space-y-2">
             <Label>المصدر</Label>
-            <Select value={referralSourceId} onValueChange={setReferralSourceId}>
-              <SelectTrigger><SelectValue placeholder="اختيار" /></SelectTrigger>
-              <SelectContent>
-                {referralSources?.map(r => <SelectItem key={r.id} value={r.id}>{r.label_ar || r.label_fr}</SelectItem>)}
-              </SelectContent>
-            </Select>
+            <AutocompleteWithAdd
+              value={referralSourceText}
+              onChange={(v) => {
+                setReferralSourceText(v);
+                // Clear selection if user edits freely
+                setReferralSourceId("");
+              }}
+              onSelect={(opt) => {
+                setReferralSourceId(opt.id);
+                setReferralSourceText(opt.label);
+              }}
+              options={(referralSources || []).map(r => ({
+                id: r.id,
+                label: r.label_ar || r.label_fr,
+                sublabel: r.label_fr,
+              }))}
+              placeholder="اكتب للبحث أو إضافة مصدر جديد..."
+              addDialogTitle="إضافة مصدر إحالة جديد"
+              addFields={[
+                { key: "label_ar", label: "التسمية بالعربية", required: true },
+                { key: "label_fr", label: "التسمية بالفرنسية" },
+              ]}
+              onAddNew={async (values) => {
+                const { data, error } = await supabase.from("referral_sources").insert({
+                  label_fr: values.label_fr || values.label_ar,
+                  label_ar: values.label_ar,
+                }).select("id, label_fr, label_ar").single();
+                if (error) { toast.error("خطأ في الإضافة"); throw error; }
+                queryClient.invalidateQueries({ queryKey: ["ref-referral-sources"] });
+                if (data) {
+                  setReferralSourceId(data.id);
+                  setReferralSourceText(data.label_ar || data.label_fr);
+                }
+                toast.success("تمت إضافة المصدر بنجاح");
+              }}
+            />
           </div>
           <div className="space-y-2">
             <Label>نوع الوثيقة</Label>
