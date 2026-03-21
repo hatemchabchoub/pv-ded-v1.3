@@ -76,7 +76,13 @@ const App = () => (
                 </RoleGuard>
               </ProtectedRoute>
             } />
-
+            <Route path="/pv/review" element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={["admin", "officer", "department_supervisor"]}>
+                  <PvReviewPage />
+                </RoleGuard>
+              </ProtectedRoute>
+            } />
 
 
             <Route path="/import/excel" element={
