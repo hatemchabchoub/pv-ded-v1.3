@@ -627,18 +627,10 @@ const PvListPage = () => {
           </TableBody>
         </Table>
 
-        <div className="flex items-center justify-between px-4 py-3 border-t no-print">
+        <div className="flex items-center px-4 py-3 border-t no-print">
           <p className="text-xs text-muted-foreground">
-            الصفحة {page + 1} من {Math.max(totalPages, 1)} — {pvData?.count || 0} سجل
+            {pvData?.count || 0} سجل
           </p>
-          <div className="flex items-center gap-1">
-            <Button variant="outline" size="icon" className="h-7 w-7" disabled={page === 0} onClick={() => setPage(p => p - 1)}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button variant="outline" size="icon" className="h-7 w-7" disabled={page >= totalPages - 1} onClick={() => setPage(p => p + 1)}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-          </div>
         </div>
       </div>
 
