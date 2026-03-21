@@ -795,6 +795,63 @@ const PvListPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Merge suggestions dialog */}
+      <Dialog open={showMergeDialog} onOpenChange={setShowMergeDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitMerge className="h-5 w-5 text-primary" />
+              اقتراحات الدمج
+            </DialogTitle>
+            <DialogDescription>
+              تم تحليل المحاضر واكتشاف {mergeSuggestions.length} مجموعة يمكن دمجها. اختر الاقتراحات التي تريد تطبيقها.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            {mergeSuggestions.map((suggestion, idx) => (
+              <div
+                key={idx}
+                className={`border rounded-lg p-3 transition-colors cursor-pointer ${mergeAccepted.has(idx) ? "border-primary bg-primary/5" : "border-muted opacity-60"}`}
+                onClick={() => toggleMergeAccept(idx)}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Checkbox checked={mergeAccepted.has(idx)} onCheckedChange={() => toggleMergeAccept(idx)} />
+                    <span className="text-sm font-semibold">المجموعة {idx + 1}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{suggestion.children.length} محضر سيتم ربطه</span>
+                </div>
+                <div className="space-y-1 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary">أب</span>
+                    <span className="font-mono">{suggestion.parentPv.pv_number}</span>
+                    <span className="text-muted-foreground text-xs">({suggestion.parentPv.pv_date})</span>
+                  </div>
+                  {suggestion.children.map((child: any) => (
+                    <div key={child.id} className="flex items-center gap-2 ps-4">
+                      <span className="text-muted-foreground">↳</span>
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-accent/10 text-accent-foreground">ضلع</span>
+                      <span className="font-mono">{child.pv_number}</span>
+                      <span className="text-muted-foreground text-xs">({child.pv_date})</span>
+                      {child.parent_pv_id && (
+                        <span className="text-xs text-destructive">(مرتبط حالياً بمحضر آخر — سيتم تحديثه)</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowMergeDialog(false)} disabled={merging}>إلغاء</Button>
+            <Button onClick={applyMerges} disabled={merging || mergeAccepted.size === 0}>
+              <Check className="h-4 w-4" />
+              {merging ? "جاري الدمج..." : `تطبيق (${mergeAccepted.size})`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
