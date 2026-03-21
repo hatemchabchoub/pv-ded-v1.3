@@ -85,6 +85,13 @@ const App = () => (
                 </RoleGuard>
               </ProtectedRoute>
             } />
+            <Route path="/import/pdf-batch" element={
+              <ProtectedRoute>
+                <RoleGuard allowedRoles={["admin", "officer", "department_supervisor"]}>
+                  <PdfBatchImportPage />
+                </RoleGuard>
+              </ProtectedRoute>
+            } />
 
             <Route path="/reports" element={
               <ProtectedRoute>
