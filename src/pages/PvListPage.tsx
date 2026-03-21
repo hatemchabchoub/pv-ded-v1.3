@@ -22,7 +22,7 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  FilePlus, Search, Download, Eye, Pencil, Trash2, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Printer,
+  FilePlus, Search, Download, Eye, Pencil, Trash2, ChevronDown, ChevronUp, Printer,
   ArrowUpDown, ArrowUp, ArrowDown, Filter, X,
 } from "lucide-react";
 import { exportPvToExcel } from "@/lib/excel-export";
