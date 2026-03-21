@@ -98,13 +98,16 @@ const PvReviewPage = () => {
       return data || [];
     },
   });
-  const { data: officers } = useQuery({
+  const { data: allOfficers } = useQuery({
     queryKey: ["ref-officers-all"],
     queryFn: async () => {
-      const { data } = await supabase.from("officers").select("id, full_name, badge_number, rank_label").eq("active", true).order("full_name");
+      const { data } = await supabase.from("officers").select("id, full_name, badge_number, rank_label, department_id").eq("active", true).order("full_name");
       return data || [];
     },
   });
+  const officers = departmentId
+    ? allOfficers?.filter(o => o.department_id === departmentId)
+    : allOfficers;
   const { data: referralSources } = useQuery({
     queryKey: ["ref-referral-sources"],
     queryFn: async () => {
