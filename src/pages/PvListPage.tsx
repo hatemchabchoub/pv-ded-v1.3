@@ -434,7 +434,7 @@ const PvListPage = () => {
             </SelectContent>
           </Select>
 
-          <Select value={officerFilter} onValueChange={(v) => { setOfficerFilter(v); setPage(0); }}>
+          <Select value={officerFilter} onValueChange={(v) => { setOfficerFilter(v); }}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="الضابط" />
             </SelectTrigger>
