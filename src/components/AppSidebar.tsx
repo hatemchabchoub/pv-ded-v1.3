@@ -41,6 +41,7 @@ const mainItems: NavItem[] = [
   { title: "لوحة القيادة", url: "/", icon: LayoutDashboard },
   { title: "المحاضر", url: "/pv", icon: FileText },
   { title: "محضر جديد", url: "/pv/new", icon: FilePlus, roles: ["admin", "officer", "department_supervisor"] },
+  { title: "مراجعة المسودات", url: "/pv/review", icon: Shield, roles: ["admin", "officer", "department_supervisor"] },
 ];
 
 const importItems: NavItem[] = [
