@@ -104,6 +104,13 @@ const PvListPage = () => {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const queryClient = useQueryClient();
 
+  // Drag-and-drop state for parent-child linking
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const dragSourceRef = useRef<{ id: string; pvNumber: string } | null>(null);
+  const [showLinkDialog, setShowLinkDialog] = useState(false);
+  const [linkPayload, setLinkPayload] = useState<{ childId: string; childNumber: string; parentId: string; parentNumber: string } | null>(null);
+  const [linking, setLinking] = useState(false);
+
   const isNationalSupervisor = roles.includes("national_supervisor");
   const isDeptSupervisor = roles.includes("department_supervisor");
   const isOfficer = roles.includes("officer");
