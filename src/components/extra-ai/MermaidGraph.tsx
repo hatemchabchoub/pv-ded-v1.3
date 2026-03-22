@@ -29,7 +29,17 @@ function sanitizeMermaidCode(raw: string): string {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("%%") || trimmed === "end" || trimmed.startsWith("classDef") || trimmed.startsWith("class ") || trimmed.startsWith("graph") || trimmed.startsWith("flowchart")) return line;
 
-    return line.replace(/(\w+)\[([^\]"]+)\]/g, (_match, id, label) => {
+    // Sanitize edge labels: |text with (parens)| → |"text with (parens)"|
+    let sanitized = line.replace(/\|([^|"]+)\|/g, (_match, label) => {
+      if (/[(){}[\]:|,،/\\<>]/.test(label)) {
+        const safeLabel = label.replace(/"/g, "'").trim();
+        return `|"${safeLabel}"|`;
+      }
+      return _match;
+    });
+
+    // Sanitize node labels
+    sanitized = sanitized.replace(/(\w+)\[([^\]"]+)\]/g, (_match, id, label) => {
       const safeLabel = label.replace(/"/g, "'").trim();
       return `${id}["${safeLabel}"]`;
     }).replace(/(\w+)\{([^}"]+)\}/g, (_match, id, label) => {
@@ -42,6 +52,7 @@ function sanitizeMermaidCode(raw: string): string {
       }
       return _match;
     });
+    return sanitized;
   });
   return lines.join("\n");
 }
