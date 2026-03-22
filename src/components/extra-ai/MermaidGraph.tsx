@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, ZoomIn, ZoomOut, RotateCcw, Maximize2, Image } from "lucide-react";
+import { injectStyles, sanitizeMermaidCode } from "@/components/extra-ai/mermaid-utils";
 
 interface Props {
   code: string;
@@ -19,68 +20,7 @@ const ENTITY_LEGEND = [
   { key: "officer", label: "أعوان / إطارات", color: "#0d9488", icon: "🛡️", shape: "rectangle" },
 ];
 
-/** Strip HTML tags, fix special chars, and clean node labels for valid Mermaid syntax */
-function sanitizeMermaidCode(raw: string): string {
-  let cleaned = raw;
-  cleaned = cleaned.replace(/<\/?[a-zA-Z][^>]*\/?>/g, " ");
-  cleaned = cleaned.replace(/ {2,}/g, " ");
-
-  const lines = cleaned.split("\n").map(line => {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("%%") || trimmed === "end" || trimmed.startsWith("classDef") || trimmed.startsWith("class ") || trimmed.startsWith("graph") || trimmed.startsWith("flowchart")) return line;
-
-    // Sanitize edge labels: |text with (parens)| → |"text with (parens)"|
-    let sanitized = line.replace(/\|([^|"]+)\|/g, (_match, label) => {
-      if (/[(){}[\]:|,،/\\<>]/.test(label)) {
-        const safeLabel = label.replace(/"/g, "'").trim();
-        return `|"${safeLabel}"|`;
-      }
-      return _match;
-    });
-
-    // Sanitize node labels
-    sanitized = sanitized.replace(/(\w+)\[([^\]"]+)\]/g, (_match, id, label) => {
-      const safeLabel = label.replace(/"/g, "'").trim();
-      return `${id}["${safeLabel}"]`;
-    }).replace(/(\w+)\{([^}"]+)\}/g, (_match, id, label) => {
-      const safeLabel = label.replace(/"/g, "'").trim();
-      return `${id}{"${safeLabel}"}`;
-    }).replace(/(\w+)\(([^)"]+)\)/g, (_match, id, label) => {
-      if (/[:|,،/\\]/.test(label)) {
-        const safeLabel = label.replace(/"/g, "'").trim();
-        return `${id}("${safeLabel}")`;
-      }
-      return _match;
-    });
-    return sanitized;
-  });
-  return lines.join("\n");
-}
-
-/** Inject classDef styles if not already present */
-function injectStyles(code: string): string {
-  const hasClassDef = /classDef\s/.test(code);
-  if (hasClassDef) return code;
-
-  const classDefs = `
-  classDef person fill:#dbeafe,stroke:#3b82f6,stroke-width:2px,color:#1e3a5f,font-weight:bold
-  classDef company fill:#ede9fe,stroke:#8b5cf6,stroke-width:2px,color:#3b1f7a,font-weight:bold
-  classDef vehicle fill:#fef3c7,stroke:#f59e0b,stroke-width:2px,color:#78350f,font-weight:bold
-  classDef goods fill:#fee2e2,stroke:#ef4444,stroke-width:2px,color:#7f1d1d,font-weight:bold
-  classDef location fill:#d1fae5,stroke:#10b981,stroke-width:2px,color:#064e3b,font-weight:bold
-  classDef document fill:#cffafe,stroke:#06b6d4,stroke-width:2px,color:#164e63,font-weight:bold
-  classDef violation fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#881337,font-weight:bold
-  classDef officer fill:#ccfbf1,stroke:#0d9488,stroke-width:2px,color:#134e4a,font-weight:bold
-  classDef default fill:#f8fafc,stroke:#94a3b8,stroke-width:1px,color:#334155`;
-
-  // Insert after the first line (graph TD or flowchart TD)
-  const firstNewline = code.indexOf("\n");
-  if (firstNewline === -1) return code + "\n" + classDefs;
-  return code.slice(0, firstNewline) + "\n" + classDefs + code.slice(firstNewline);
-}
-
 export default function MermaidGraph({ code }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [svg, setSvg] = useState<string>("");
   const [scale, setScale] = useState(1);
   const [error, setError] = useState("");
@@ -209,7 +149,6 @@ export default function MermaidGraph({ code }: Props) {
           style={{ direction: "ltr", maxHeight: fullscreen ? "calc(100vh - 200px)" : "600px" }}
         >
           <div
-            ref={containerRef}
             className="mermaid-container"
             style={{
               transform: `scale(${scale})`,
